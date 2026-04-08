@@ -1,0 +1,193 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html { scroll-behavior: smooth; }
+
+:root {
+  --bg: #000;
+  --glass: rgba(255,255,255,0.03);
+  --glass-hover: rgba(255,255,255,0.06);
+  --border: rgba(255,255,255,0.08);
+  --text: #fff;
+  --text-secondary: #868F97;
+  --text-muted: #555;
+  --accent: #479FFA;
+  --gain: #4EBE96;
+  --loss: #f87171;
+  --orange: #FFA16C;
+}
+
+body { background: #000; color: #fff; }
+
+::selection { background: rgba(71,159,250,0.25); }
+
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+
+/* ── Glass ── */
+.glass {
+  background: rgba(255,255,255,0.03);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 0.5px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+}
+.glass-sm {
+  background: rgba(255,255,255,0.03);
+  backdrop-filter: blur(8px);
+  border: 0.5px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+}
+.glass-input {
+  background: rgba(255,255,255,0.04);
+  backdrop-filter: blur(8px);
+  border: 0.5px solid rgba(255,255,255,0.08);
+  border-radius: 99px;
+  transition: border-color 0.2s;
+}
+.glass-input:focus {
+  border-color: rgba(71,159,250,0.4);
+  outline: none;
+}
+
+/* ── Tabular numbers ── */
+.tabular-nums { font-variant-numeric: tabular-nums; }
+
+/* ── Stock table ── */
+.stock-table { width: 100%; border-collapse: collapse; }
+.stock-table th {
+  text-align: left;
+  padding: 12px 16px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.stock-table td {
+  padding: 14px 16px;
+  font-size: 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.stock-table tbody tr {
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.stock-table tbody tr:hover td {
+  background: rgba(255,255,255,0.03);
+}
+
+/* ── Chips ── */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 16px;
+  font-size: 13px;
+  border-radius: 99px;
+  background: rgba(255,255,255,0.04);
+  color: #868F97;
+  border: 0.5px solid rgba(255,255,255,0.08);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.chip:hover { background: rgba(255,255,255,0.08); color: #fff; }
+.chip-active {
+  background: rgba(71,159,250,0.1);
+  color: #479FFA;
+  border-color: rgba(71,159,250,0.2);
+}
+
+/* ── Badges ── */
+.badge-gain { background: rgba(78,190,150,0.12); color: #4EBE96; }
+.badge-loss { background: rgba(248,113,113,0.12); color: #f87171; }
+.sector-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  font-size: 12px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.06);
+  color: #868F97;
+}
+
+/* ── Pill tabs ── */
+.pill-tab {
+  padding: 6px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 8px;
+  color: #868F97;
+  transition: all 0.15s;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+}
+.pill-tab:hover { color: #fff; background: rgba(255,255,255,0.06); }
+.pill-tab-active { color: #fff; background: rgba(255,255,255,0.08); }
+
+/* ── Glow effects ── */
+.glow-blue {
+  position: absolute;
+  width: 600px;
+  height: 400px;
+  background: radial-gradient(ellipse, rgba(71,159,250,0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+.glow-orange {
+  position: absolute;
+  width: 500px;
+  height: 350px;
+  background: radial-gradient(ellipse, rgba(255,161,108,0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+.glow-green {
+  position: absolute;
+  width: 400px;
+  height: 300px;
+  background: radial-gradient(ellipse, rgba(78,190,150,0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* ── 3D product mockup ── */
+.perspective-container {
+  perspective: 1200px;
+}
+.product-tilt {
+  transform: rotateX(8deg) rotateY(-4deg) scale(0.98);
+  transition: transform 0.4s ease;
+}
+.product-tilt:hover {
+  transform: rotateX(2deg) rotateY(-1deg) scale(1);
+}
+
+/* ── Section spacing ── */
+.section {
+  padding: 100px 0;
+  position: relative;
+  overflow: hidden;
+}
+.section-sm {
+  padding: 60px 0;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ── Feature icon circles (like Fey) ── */
+.feature-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.04);
+  border: 0.5px solid rgba(255,255,255,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Divider ── */
+.divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+}

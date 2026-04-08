@@ -1,0 +1,180 @@
+"use client";
+
+// React context providing shared settings to all pages
+// Reads from Supabase user_settings table on mount
+// Falls back to defaults when Supabase isn't configured
+
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
+
+// ── Settings shape ──────────────────────────────────────────────────────────
+
+export interface AppSettings {
+  timeframe: "day" | "swing" | "longterm";
+  autoMode: boolean;
+  startingBalance: number;
+  stopLossPct: number;
+  takeProfitPct: number;
+  maxPositionPct: number;
+  dataRefreshMin: number;
+  ollamaUrl: string;
+  ollamaModel: string;
+}
+
+const DEFAULT_SETTINGS: AppSettings = {
+  timeframe: "swing",
+  autoMode: false,
+  startingBalance: 100_000,
+  stopLossPct: 10,
+  takeProfitPct: 25,
+  maxPositionPct: 10,
+  dataRefreshMin: 15,
+  ollamaUrl: "http://localhost:11434",
+  ollamaModel: "quantamental",
+};
+
+// ── Supabase helper (nullable) ──────────────────────────────────────────────
+
+function getOptionalSupabase() {
+  try {
+    // Dynamic require so the import itself never throws at module-parse time.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { getSupabase } = require("@/lib/supabase");
+    return getSupabase();
+  } catch {
+    // Supabase env vars are missing — that's fine, we just use defaults.
+    return null;
+  }
+}
+
+// ── Context ─────────────────────────────────────────────────────────────────
+
+interface SettingsContextValue {
+  settings: AppSettings;
+  ready: boolean;
+  updateSettings: (partial: Partial<AppSettings>) => Promise<void>;
+}
+
+const SettingsContext = createContext<SettingsContextValue>({
+  settings: DEFAULT_SETTINGS,
+  ready: false,
+  updateSettings: async () => {},
+});
+
+// ── Provider ────────────────────────────────────────────────────────────────
+
+export function SettingsProvider({ children }: { children: ReactNode }) {
+  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
+  const [ready, setReady] = useState(false);
+
+  // Fetch settings from Supabase on mount (if configured)
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      const supabase = getOptionalSupabase();
+      if (!supabase) {
+        setReady(true);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from("user_settings")
+          .select("*")
+          .limit(1)
+          .maybeSingle();
+
+        if (!error && data && !cancelled) {
+          setSettings((prev) => ({
+            ...prev,
+            timeframe: data.timeframe ?? prev.timeframe,
+            autoMode: data.auto_mode ?? prev.autoMode,
+            startingBalance: data.starting_balance ?? prev.startingBalance,
+            stopLossPct: data.stop_loss_pct ?? prev.stopLossPct,
+            takeProfitPct: data.take_profit_pct ?? prev.takeProfitPct,
+            maxPositionPct: data.max_position_pct ?? prev.maxPositionPct,
+            dataRefreshMin: data.data_refresh_min ?? prev.dataRefreshMin,
+            ollamaUrl: data.ollama_url ?? prev.ollamaUrl,
+            ollamaModel: data.ollama_model ?? prev.ollamaModel,
+          }));
+        }
+      } catch {
+        // Supabase unreachable or table doesn't exist — use defaults silently.
+      }
+
+      if (!cancelled) setReady(true);
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Merge partial settings and persist to Supabase (if configured)
+  const updateSettings = useCallback(
+    async (partial: Partial<AppSettings>) => {
+      setSettings((prev) => {
+        const next = { ...prev, ...partial };
+        // Fire-and-forget persist — we don't block the UI on it
+        persistToSupabase(next);
+        return next;
+      });
+    },
+    [],
+  );
+
+  return (
+    <SettingsContext.Provider value={{ settings, ready, updateSettings }}>
+      {children}
+    </SettingsContext.Provider>
+  );
+}
+
+// ── Persist helper ──────────────────────────────────────────────────────────
+
+async function persistToSupabase(s: AppSettings) {
+  const supabase = getOptionalSupabase();
+  if (!supabase) return;
+
+  try {
+    await supabase.from("user_settings").upsert(
+      {
+        id: 1, // single-user app — always row 1
+        timeframe: s.timeframe,
+        auto_mode: s.autoMode,
+        starting_balance: s.startingBalance,
+        stop_loss_pct: s.stopLossPct,
+        take_profit_pct: s.takeProfitPct,
+        max_position_pct: s.maxPositionPct,
+        data_refresh_min: s.dataRefreshMin,
+        ollama_url: s.ollamaUrl,
+        ollama_model: s.ollamaModel,
+      },
+      { onConflict: "id" },
+    );
+  } catch {
+    // Silent failure — Supabase is optional.
+  }
+}
+
+// ── Hooks ───────────────────────────────────────────────────────────────────
+
+export function useSettings(): AppSettings {
+  return useContext(SettingsContext).settings;
+}
+
+export function useSettingsReady(): boolean {
+  return useContext(SettingsContext).ready;
+}
+
+export function useUpdateSettings() {
+  return useContext(SettingsContext).updateSettings;
+}
