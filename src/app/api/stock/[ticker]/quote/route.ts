@@ -9,7 +9,7 @@ export async function GET(
   const { ticker } = await params;
 
   const res = await fetch(
-    `https://financialmodelingprep.com/api/v3/quote/${ticker.toUpperCase()}?apikey=${FMP_KEY}`,
+    `https://financialmodelingprep.com/stable/profile?symbol=${ticker.toUpperCase()}&apikey=${FMP_KEY}`,
     { next: { revalidate: 30 } }
   );
 
@@ -25,13 +25,13 @@ export async function GET(
     ticker: q.symbol,
     price: q.price,
     change: q.change,
-    change_pct: q.changesPercentage,
-    open: q.open,
-    high: q.dayHigh,
-    low: q.dayLow,
+    change_pct: q.changePercentage,
+    open: q.open || q.price,
+    high: q.range ? parseFloat(q.range.split("-")[1]) : q.price,
+    low: q.range ? parseFloat(q.range.split("-")[0]) : q.price,
     volume: q.volume,
     market_cap: q.marketCap,
-    name: q.name,
+    name: q.companyName,
     sector: q.sector || "",
   });
 }

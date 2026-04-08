@@ -38,7 +38,7 @@ async function fetchPrice(ticker: string): Promise<number | null> {
   if (!FMP_KEY) return null;
   try {
     const res = await fetch(
-      `https://financialmodelingprep.com/api/v3/quote/${encodeURIComponent(ticker)}?apikey=${FMP_KEY}`,
+      `https://financialmodelingprep.com/stable/profile?symbol=${encodeURIComponent(ticker)}&apikey=${FMP_KEY}`,
       { signal: AbortSignal.timeout(10_000) },
     );
     if (!res.ok) return null;

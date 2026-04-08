@@ -9,18 +9,18 @@ export async function GET(
   const { ticker } = await params;
   const t = ticker.toUpperCase();
 
-  // Fetch ratios, key metrics, and insider trades in parallel
+  // Fetch ratios, key metrics, and insider trades in parallel (stable API)
   const [ratiosRes, metricsRes, insiderRes] = await Promise.allSettled([
     fetch(
-      `https://financialmodelingprep.com/api/v3/ratios/${t}?period=quarter&limit=1&apikey=${FMP_KEY}`,
+      `https://financialmodelingprep.com/stable/ratios?symbol=${t}&period=quarter&limit=1&apikey=${FMP_KEY}`,
       { next: { revalidate: 3600 } }
     ),
     fetch(
-      `https://financialmodelingprep.com/api/v3/key-metrics/${t}?period=quarter&limit=1&apikey=${FMP_KEY}`,
+      `https://financialmodelingprep.com/stable/key-metrics?symbol=${t}&period=quarter&limit=1&apikey=${FMP_KEY}`,
       { next: { revalidate: 3600 } }
     ),
     fetch(
-      `https://financialmodelingprep.com/api/v4/insider-trading?symbol=${t}&limit=10&apikey=${FMP_KEY}`,
+      `https://financialmodelingprep.com/stable/insider-trading?symbol=${t}&limit=10&apikey=${FMP_KEY}`,
       { next: { revalidate: 3600 } }
     ),
   ]);

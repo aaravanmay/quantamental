@@ -8,19 +8,22 @@ export async function GET(
 ) {
   const { ticker } = await params;
 
-  // Fetch 1 year of daily OHLCV data from FMP
+  // Fetch 1 year of daily OHLCV data from FMP (stable API)
   const res = await fetch(
-    `https://financialmodelingprep.com/api/v3/historical-price-full/${ticker.toUpperCase()}?timeseries=365&apikey=${FMP_KEY}`,
+    `https://financialmodelingprep.com/stable/historical-price-eod/full?symbol=${ticker.toUpperCase()}&apikey=${FMP_KEY}`,
     { next: { revalidate: 3600 } }
   );
 
   if (!res.ok) return NextResponse.json([], { status: 502 });
   const data = await res.json();
 
-  if (!data?.historical) return NextResponse.json([]);
+  // Stable API returns flat array, not { historical: [...] }
+  const records = Array.isArray(data) ? data : data?.historical || [];
+  if (records.length === 0) return NextResponse.json([]);
 
-  // Transform to TradingView Lightweight Charts format
-  const candles = data.historical
+  // Transform to TradingView Lightweight Charts format, take last 365 days
+  const candles = records
+    .slice(0, 365)
     .map((d: any) => ({
       time: d.date,
       open: d.open,

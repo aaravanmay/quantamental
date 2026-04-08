@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
   if (q.length < 1) return NextResponse.json([]);
 
   const res = await fetch(
-    `https://financialmodelingprep.com/api/v3/search?query=${encodeURIComponent(q)}&limit=10&apikey=${FMP_KEY}`,
+    `https://financialmodelingprep.com/stable/search-name?query=${encodeURIComponent(q)}&limit=10&apikey=${FMP_KEY}`,
     { next: { revalidate: 60 } }
   );
 
