@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { LineChart, ToggleLeft, ToggleRight } from "lucide-react";
+import { LineChart, ToggleLeft, ToggleRight, Plus, X } from "lucide-react";
 import { cn, formatCurrency, formatPct, pnlColor } from "@/lib/utils";
 import { useSettings, useUpdateSettings } from "@/lib/settings-context";
 import { ScrollReveal } from "@/components/ScrollReveal";
@@ -57,6 +57,57 @@ export default function PaperTradingPage() {
         }
       }
     } catch {}
+  }
+
+  // New trade form
+  const [showNewTrade, setShowNewTrade] = useState(false);
+  const [newTicker, setNewTicker] = useState("");
+  const [newShares, setNewShares] = useState("");
+  const [newDirection, setNewDirection] = useState<"LONG" | "SHORT">("LONG");
+  const [placing, setPlacing] = useState(false);
+
+  async function handlePlaceTrade() {
+    if (!newTicker || !newShares) return;
+    setPlacing(true);
+    try {
+      // Fetch current price
+      const quoteRes = await fetch(`/api/stock/${newTicker.toUpperCase()}/quote`);
+      let price = 0;
+      if (quoteRes.ok) {
+        const q = await quoteRes.json();
+        price = q.price;
+      }
+      if (!price) {
+        alert("Could not fetch price for " + newTicker.toUpperCase());
+        setPlacing(false);
+        return;
+      }
+
+      const res = await fetch("/api/paper-trade", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ticker: newTicker.toUpperCase(),
+          direction: newDirection,
+          shares: Number(newShares),
+          price,
+          mode: "manual",
+        }),
+      });
+
+      if (res.ok) {
+        // Refresh trades
+        const refreshRes = await fetch("/api/paper-trade");
+        if (refreshRes.ok) {
+          const data = await refreshRes.json();
+          setTrades(data.trades || []);
+        }
+        setNewTicker("");
+        setNewShares("");
+        setShowNewTrade(false);
+      }
+    } catch {}
+    setPlacing(false);
   }
 
   const openTrades = trades.filter((t) => t.status === "open");
@@ -192,6 +243,103 @@ export default function PaperTradingPage() {
           </ScrollReveal>
         )}
 
+        {/* New Trade Form (Manual Mode) */}
+        {mode === "manual" && (
+          <ScrollReveal delay={75}>
+            <div className="mb-10">
+              {!showNewTrade ? (
+                <button
+                  onClick={() => setShowNewTrade(true)}
+                  className="flex items-center gap-2 rounded-lg px-4 py-2.5 text-[13px] font-medium text-white transition-all hover:scale-[1.02]"
+                  style={{
+                    background: "rgba(71,159,250,0.12)",
+                    border: "1px solid rgba(71,159,250,0.2)",
+                  }}
+                >
+                  <Plus size={14} />
+                  New Trade
+                </button>
+              ) : (
+                <div
+                  className="glass rounded-2xl p-5"
+                  style={{ boxShadow: "0 0 60px -20px rgba(71,159,250,0.08), 0 20px 40px -20px rgba(0,0,0,0.3)" }}
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-[14px] font-semibold text-white">Place a Paper Trade</h3>
+                    <button onClick={() => setShowNewTrade(false)} className="text-[#555] hover:text-white transition-colors">
+                      <X size={16} />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-4 gap-3">
+                    <div>
+                      <label className="text-[11px] uppercase tracking-wider text-[#555] mb-1 block">Ticker</label>
+                      <input
+                        value={newTicker}
+                        onChange={(e) => setNewTicker(e.target.value.toUpperCase())}
+                        placeholder="AAPL"
+                        className="glass-input w-full px-3 py-2 text-sm font-mono text-white placeholder:text-[#555]"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] uppercase tracking-wider text-[#555] mb-1 block">Shares</label>
+                      <input
+                        value={newShares}
+                        onChange={(e) => setNewShares(e.target.value)}
+                        placeholder="10"
+                        type="number"
+                        className="glass-input w-full px-3 py-2 text-sm font-mono text-white placeholder:text-[#555]"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] uppercase tracking-wider text-[#555] mb-1 block">Direction</label>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setNewDirection("LONG")}
+                          className="flex-1 rounded-lg px-3 py-2 text-[12px] font-medium transition-colors"
+                          style={{
+                            background: newDirection === "LONG" ? "rgba(78,190,150,0.15)" : "rgba(255,255,255,0.04)",
+                            border: newDirection === "LONG" ? "1px solid rgba(78,190,150,0.3)" : "1px solid rgba(255,255,255,0.08)",
+                            color: newDirection === "LONG" ? "#4EBE96" : "#868F97",
+                          }}
+                        >
+                          Long
+                        </button>
+                        <button
+                          onClick={() => setNewDirection("SHORT")}
+                          className="flex-1 rounded-lg px-3 py-2 text-[12px] font-medium transition-colors"
+                          style={{
+                            background: newDirection === "SHORT" ? "rgba(248,113,113,0.15)" : "rgba(255,255,255,0.04)",
+                            border: newDirection === "SHORT" ? "1px solid rgba(248,113,113,0.3)" : "1px solid rgba(255,255,255,0.08)",
+                            color: newDirection === "SHORT" ? "#f87171" : "#868F97",
+                          }}
+                        >
+                          Short
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex items-end">
+                      <button
+                        onClick={handlePlaceTrade}
+                        disabled={placing || !newTicker || !newShares}
+                        className="w-full rounded-lg px-4 py-2 text-[13px] font-medium text-white transition-all hover:scale-[1.02] disabled:opacity-40 disabled:cursor-not-allowed"
+                        style={{
+                          background: "rgba(71,159,250,0.15)",
+                          border: "1px solid rgba(71,159,250,0.25)",
+                        }}
+                      >
+                        {placing ? "Placing..." : "Buy at Market Price"}
+                      </button>
+                    </div>
+                  </div>
+                  <p className="mt-3 text-[11px] text-[#555]">
+                    Price is fetched live from FMP at the moment you click Buy.
+                  </p>
+                </div>
+              )}
+            </div>
+          </ScrollReveal>
+        )}
+
         {/* Performance Stats */}
         <ScrollReveal delay={100}>
           <div className="mb-12 grid grid-cols-6 gap-3">
@@ -235,10 +383,28 @@ export default function PaperTradingPage() {
               ${startingBalance.toLocaleString()} starting capital
             </div>
             <EquityCurve
-              data={trades.length > 0 ? [] : EMPTY_EQUITY}
+              data={(() => {
+                if (closedTrades.length === 0) return EMPTY_EQUITY;
+                // Build equity curve from closed trade P&L
+                let balance = startingBalance;
+                const curve = [balance];
+                closedTrades
+                  .slice()
+                  .sort((a, b) => (a.exit_date || "").localeCompare(b.exit_date || ""))
+                  .forEach((t) => {
+                    const pnl = t.direction === "LONG"
+                      ? ((t.exit_price || 0) - t.entry_price) * t.shares
+                      : (t.entry_price - (t.exit_price || 0)) * t.shares;
+                    balance += pnl;
+                    curve.push(balance);
+                  });
+                return curve;
+              })()}
               height={200}
               color="#479FFA"
-              label={trades.length > 0 ? "Paper Trading Performance" : `No trades yet — starting at $${startingBalance.toLocaleString()}`}
+              label={closedTrades.length > 0
+                ? `Paper Trading Performance — ${closedTrades.length} closed trades`
+                : `No closed trades yet — starting at $${startingBalance.toLocaleString()}`}
             />
           </div>
         </ScrollReveal>
@@ -289,7 +455,7 @@ export default function PaperTradingPage() {
                         <p className="text-[13px] text-[#868F97]">
                           No open positions.{" "}
                           {mode === "manual"
-                            ? "Go to Stock Finder to find signals."
+                            ? "Click \"New Trade\" above to place your first paper trade."
                             : "Waiting for GO signals from Stock Finder."}
                         </p>
                       </td>

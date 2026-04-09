@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useSettings, useUpdateSettings } from "@/lib/settings-context";
 import { ScrollReveal } from "@/components/ScrollReveal";
-import { Save, Monitor, Clock, DollarSign, Wifi, Database, Brain } from "lucide-react";
+import { Save, Monitor, Clock, DollarSign, Database, Brain, Check } from "lucide-react";
 
 const gradientText = {
   background: "linear-gradient(180deg, #fff 30%, rgba(255,255,255,0.4) 100%)",
@@ -28,13 +28,11 @@ export default function SettingsPage() {
   const [autoMode, setAutoMode] = useState(settings.autoMode);
   const [ollamaUrl, setOllamaUrl] = useState(settings.ollamaUrl);
   const [ollamaModel, setOllamaModel] = useState(settings.ollamaModel);
-  const [finnhubKey, setFinnhubKey] = useState("");
-  const [fmpKey, setFmpKey] = useState("");
-  const [perplexityKey, setPerplexityKey] = useState("");
   const [dataRefreshInterval, setDataRefreshInterval] = useState(String(settings.dataRefreshMin));
   const [stopLoss, setStopLoss] = useState(String(settings.stopLossPct));
   const [takeProfit, setTakeProfit] = useState(String(settings.takeProfitPct));
   const [maxPositionSize, setMaxPositionSize] = useState(String(settings.maxPositionPct));
+  const [saved, setSaved] = useState(false);
 
   function handleSave() {
     updateSettings({
@@ -48,6 +46,8 @@ export default function SettingsPage() {
       ollamaUrl,
       ollamaModel,
     });
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
   }
 
   return (
@@ -66,12 +66,12 @@ export default function SettingsPage() {
               onClick={handleSave}
               className="flex items-center gap-2 rounded-lg px-4 py-2 text-[13px] font-medium text-white transition-all hover:scale-[1.02]"
               style={{
-                background: "rgba(71,159,250,0.12)",
-                border: "1px solid rgba(71,159,250,0.2)",
+                background: saved ? "rgba(78,190,150,0.15)" : "rgba(71,159,250,0.12)",
+                border: saved ? "1px solid rgba(78,190,150,0.3)" : "1px solid rgba(71,159,250,0.2)",
               }}
             >
-              <Save size={14} />
-              Save Settings
+              {saved ? <Check size={14} className="text-[#4EBE96]" /> : <Save size={14} />}
+              {saved ? "Saved!" : "Save Settings"}
             </button>
           </div>
         </ScrollReveal>
@@ -190,56 +190,28 @@ export default function SettingsPage() {
           </div>
         </ScrollReveal>
 
-        {/* ═══ API Keys ═══ */}
-        <ScrollReveal delay={200}>
-          <div className="mb-10">
-            <div className="flex items-center gap-2 mb-4">
-              <Wifi size={16} className="text-[#479FFA]" />
-              <h2 className="text-[18px] font-semibold">API Keys</h2>
-            </div>
-            <p className="text-[13px] text-[#868F97] mb-5">
-              Keys are stored locally and never sent to external servers. Used for real-time market data and news.
-            </p>
-            <div className="grid grid-cols-1 gap-4">
-              <SettingCard label="Finnhub API Key" desc="Free tier: 60 requests/min — used for company news and market data">
-                <input value={finnhubKey} onChange={(e) => setFinnhubKey(e.target.value)}
-                  className="glass-input w-full px-3 py-2 text-sm font-mono text-white placeholder:text-[#555]"
-                  placeholder="Enter your Finnhub API key" type="password" />
-              </SettingCard>
-              <SettingCard label="FMP API Key" desc="Free tier: 250 requests/day — used for fundamentals, balance sheets, insider trades">
-                <input value={fmpKey} onChange={(e) => setFmpKey(e.target.value)}
-                  className="glass-input w-full px-3 py-2 text-sm font-mono text-white placeholder:text-[#555]"
-                  placeholder="Enter your FMP API key" type="password" />
-              </SettingCard>
-              <SettingCard label="Perplexity API Key (Optional)" desc="~$0.001/request — used for deep AI-powered web search on current events">
-                <input value={perplexityKey} onChange={(e) => setPerplexityKey(e.target.value)}
-                  className="glass-input w-full px-3 py-2 text-sm font-mono text-white placeholder:text-[#555]"
-                  placeholder="Optional — skip for free mode" type="password" />
-              </SettingCard>
-            </div>
-          </div>
-        </ScrollReveal>
-
         {/* ═══ System Status ═══ */}
-        <ScrollReveal delay={250}>
+        <ScrollReveal delay={200}>
           <div className="mb-10">
             <div className="flex items-center gap-2 mb-4">
               <Monitor size={16} className="text-[#868F97]" />
               <h2 className="text-[18px] font-semibold">System Status</h2>
             </div>
             <div className="glass p-5" style={{ boxShadow: "0 0 60px -20px rgba(71,159,250,0.06), 0 20px 40px -20px rgba(0,0,0,0.3)" }}>
-              <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                <StatusItem label="Ollama" status={ollamaUrl ? "configured" : "not set"} ok={!!ollamaUrl} />
-                <StatusItem label="Finnhub" status={finnhubKey ? "configured" : "not set"} ok={!!finnhubKey} />
-                <StatusItem label="FMP" status={fmpKey ? "configured" : "not set"} ok={!!fmpKey} />
-                <StatusItem label="Perplexity" status={perplexityKey ? "configured" : "optional"} ok={!!perplexityKey} />
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+                <StatusItem label="Supabase" status="Connected" ok={true} />
+                <StatusItem label="Finnhub" status="Connected (env)" ok={true} />
+                <StatusItem label="FMP" status="Connected (env)" ok={true} />
               </div>
+              <p className="mt-4 text-[11px] text-[#555]">
+                API keys are configured via environment variables on Vercel. No need to enter them here.
+              </p>
             </div>
           </div>
         </ScrollReveal>
 
         {/* ═══ Data & Storage ═══ */}
-        <ScrollReveal delay={300}>
+        <ScrollReveal delay={250}>
           <div>
             <div className="flex items-center gap-2 mb-4">
               <Database size={16} className="text-[#868F97]" />

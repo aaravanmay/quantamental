@@ -51,7 +51,10 @@ export function TopNav() {
         </nav>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-4">
+        <span className="text-[11px] text-[#555] hidden md:inline" title="Cmd+1 through Cmd+6 to navigate, Cmd+K to search">
+          <kbd className="px-1 py-0.5 rounded bg-[rgba(255,255,255,0.06)] text-[10px]">&#8984;K</kbd> search
+        </span>
         <Link
           href="/settings"
           className="text-[13px] text-[#868F97] hover:text-white transition-colors"

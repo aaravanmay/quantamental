@@ -5,10 +5,11 @@ import { useRouter } from "next/navigation";
 
 const ROUTES: Record<string, string> = {
   "1": "/",
-  "2": "/stock-finder",
-  "3": "/paper-trading",
-  "4": "/portfolio",
-  "5": "/settings",
+  "2": "/stocks",
+  "3": "/stock-finder",
+  "4": "/paper-trading",
+  "5": "/portfolio",
+  "6": "/settings",
 };
 
 export function KeyboardShortcuts() {

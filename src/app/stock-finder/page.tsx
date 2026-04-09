@@ -151,14 +151,21 @@ export default function StockFinderPage() {
                 }}
               />
               <button
-                className="relative inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-[13px] font-medium text-white transition-all hover:scale-[1.03]"
+                onClick={async () => {
+                  const pending = signals.filter((s) => s.validation_status === "pending");
+                  for (const s of pending) {
+                    await handleValidate(s);
+                  }
+                }}
+                disabled={!!validating || signals.filter((s) => s.validation_status === "pending").length === 0}
+                className="relative inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-[13px] font-medium text-white transition-all hover:scale-[1.03] disabled:opacity-40"
                 style={{
                   background: "rgba(255,255,255,0.08)",
                   border: "0.5px solid rgba(255,255,255,0.15)",
                   backdropFilter: "blur(8px)",
                 }}
               >
-                Validate All
+                {validating ? "Validating..." : "Validate All"}
               </button>
             </div>
           </div>
