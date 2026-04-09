@@ -29,10 +29,35 @@ export default function PaperTradingPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // TODO: Fetch from Supabase
-    setTrades([]);
-    setStats(null);
+    async function loadTrades() {
+      try {
+        const res = await fetch("/api/paper-trade");
+        if (res.ok) {
+          const data = await res.json();
+          setTrades(data.trades || []);
+        }
+      } catch {}
+    }
+    loadTrades();
   }, []);
+
+  async function handleCloseTrade(tradeId: string, currentPrice: number) {
+    try {
+      const res = await fetch("/api/paper-trade", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: tradeId, exit_price: currentPrice }),
+      });
+      if (res.ok) {
+        // Refresh trades
+        const refreshRes = await fetch("/api/paper-trade");
+        if (refreshRes.ok) {
+          const data = await refreshRes.json();
+          setTrades(data.trades || []);
+        }
+      }
+    } catch {}
+  }
 
   const openTrades = trades.filter((t) => t.status === "open");
   const closedTrades = trades.filter((t) => t.status === "closed");
@@ -314,11 +339,12 @@ export default function PaperTradingPage() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              // TODO: Close trade
+                              const price = t.entry_price; // Use entry price as fallback
+                              handleCloseTrade(t.id, price);
                             }}
                             className="rounded bg-[rgba(248,113,113,0.12)] px-2.5 py-1 text-[11px] font-medium text-loss hover:bg-[rgba(248,113,113,0.2)] transition-colors"
                           >
-                            Sell
+                            Close
                           </button>
                         </td>
                       </tr>

@@ -22,13 +22,21 @@ export async function GET(
   if (records.length === 0) return NextResponse.json([]);
 
   // Transform to TradingView Lightweight Charts format, take last 365 days
+  // Filter out any records with missing data and deduplicate by date
+  const seen = new Set<string>();
   const candles = records
     .slice(0, 365)
+    .filter((d: any) => {
+      if (!d.date || d.open == null || d.close == null) return false;
+      if (seen.has(d.date)) return false;
+      seen.add(d.date);
+      return true;
+    })
     .map((d: any) => ({
       time: d.date,
       open: d.open,
-      high: d.high,
-      low: d.low,
+      high: d.high ?? Math.max(d.open, d.close),
+      low: d.low ?? Math.min(d.open, d.close),
       close: d.close,
     }))
     .reverse(); // Oldest first for charts

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 
 // Cache the chart library import so it's instant after first load
@@ -21,6 +21,7 @@ export function PriceChart({ ticker }: { ticker: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<any>(null);
   const candleSeriesRef = useRef<any>(null);
+  const dataRef = useRef<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -40,19 +41,25 @@ export function PriceChart({ ticker }: { ticker: string }) {
           fetch(`/api/stock/${ticker}/history`),
         ]);
 
-        if (cancelled) return;
+        if (cancelled || !containerRef.current) return;
 
         const { createChart, ColorType } = chartLib;
 
-        // Clean up previous chart if ticker changed
+        // Clean up previous chart
         if (chartRef.current) {
-          chartRef.current.remove();
+          try { chartRef.current.remove(); } catch {}
           chartRef.current = null;
         }
 
-        const chart = createChart(containerRef.current, {
-          width: containerRef.current.clientWidth,
-          height: 380,
+        // Wait for container to have dimensions
+        const container = containerRef.current;
+        if (container.clientWidth === 0) {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+        if (cancelled || !containerRef.current) return;
+
+        const chart = createChart(container, {
+          autoSize: true,
           layout: {
             background: { type: ColorType.Solid, color: "transparent" },
             textColor: "#868F97",
@@ -80,7 +87,10 @@ export function PriceChart({ ticker }: { ticker: string }) {
           timeScale: {
             borderColor: "rgba(255,255,255,0.06)",
             timeVisible: false,
+            minBarSpacing: 0.5,
           },
+          handleScroll: true,
+          handleScale: true,
         });
 
         chartRef.current = chart;
@@ -99,6 +109,7 @@ export function PriceChart({ ticker }: { ticker: string }) {
         if (historyRes.ok) {
           const data = await historyRes.json();
           if (data.length > 0) {
+            dataRef.current = data;
             candleSeries.setData(data);
             chart.timeScale().fitContent();
           } else {
@@ -108,19 +119,7 @@ export function PriceChart({ ticker }: { ticker: string }) {
           setError(true);
         }
 
-        // Handle resize
-        const observer = new ResizeObserver(() => {
-          if (containerRef.current && chartRef.current) {
-            chartRef.current.applyOptions({
-              width: containerRef.current.clientWidth,
-            });
-          }
-        });
-        observer.observe(containerRef.current);
-
         setLoading(false);
-
-        return () => observer.disconnect();
       } catch (err) {
         console.error("Failed to load chart:", err);
         if (!cancelled) {
@@ -135,16 +134,39 @@ export function PriceChart({ ticker }: { ticker: string }) {
     return () => {
       cancelled = true;
       if (chartRef.current) {
-        chartRef.current.remove();
+        try { chartRef.current.remove(); } catch {}
         chartRef.current = null;
       }
     };
   }, [ticker]);
 
-  // Live price polling — update the last candle every 15s during market hours
+  // Recover chart when tab becomes visible again (handles zoom/tab-switch)
   useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
+    function handleVisibility() {
+      if (document.visibilityState === "visible" && chartRef.current) {
+        // Force chart to recalculate its size
+        try {
+          chartRef.current.timeScale().fitContent();
+        } catch {}
+      }
+    }
 
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("focus", handleVisibility);
+    window.addEventListener("resize", () => {
+      if (chartRef.current) {
+        try { chartRef.current.timeScale().fitContent(); } catch {}
+      }
+    });
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("focus", handleVisibility);
+    };
+  }, []);
+
+  // Live price polling — update the last candle every 15s
+  useEffect(() => {
     async function pollPrice() {
       try {
         const res = await fetch(`/api/stock/${ticker}/quote`);
@@ -155,7 +177,6 @@ export function PriceChart({ ticker }: { ticker: string }) {
         const now = new Date();
         const dateStr = now.toISOString().split("T")[0];
 
-        // Update today's candle with latest price
         candleSeriesRef.current.update({
           time: dateStr,
           open: q.open || q.price,
@@ -163,24 +184,17 @@ export function PriceChart({ ticker }: { ticker: string }) {
           low: Math.min(q.low || q.price, q.price),
           close: q.price,
         });
-      } catch {
-        // Silently fail — chart still shows historical data
-      }
+      } catch {}
     }
 
-    // Poll every 15 seconds
-    interval = setInterval(pollPrice, 15_000);
-    // Also poll immediately on mount
+    const interval = setInterval(pollPrice, 15_000);
     pollPrice();
 
-    return () => {
-      if (interval) clearInterval(interval);
-    };
+    return () => clearInterval(interval);
   }, [ticker]);
 
   return (
     <div className="relative">
-      {/* Loading skeleton */}
       {loading && (
         <div className="absolute inset-0 flex items-center justify-center z-10" style={{ height: 380 }}>
           <div className="flex flex-col items-center gap-2">
@@ -190,7 +204,6 @@ export function PriceChart({ ticker }: { ticker: string }) {
         </div>
       )}
 
-      {/* Error state */}
       {error && !loading && (
         <div className="absolute inset-0 flex items-center justify-center z-10" style={{ height: 380 }}>
           <p className="text-[13px] text-[#868F97]">
@@ -202,7 +215,7 @@ export function PriceChart({ ticker }: { ticker: string }) {
       <div
         ref={containerRef}
         className="w-full rounded-lg"
-        style={{ minHeight: 380, opacity: loading ? 0.3 : 1, transition: "opacity 0.3s" }}
+        style={{ height: 380, opacity: loading ? 0.3 : 1, transition: "opacity 0.3s" }}
       />
       <div className="flex items-center justify-between mt-1.5">
         <p className="text-[10px] text-[#555]">

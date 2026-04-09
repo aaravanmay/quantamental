@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { StockSearch } from "@/components/StockSearch";
@@ -10,20 +10,48 @@ import { BarChart3, Brain, Shield, TrendingUp, Zap, Search, LineChart, Briefcase
 
 const CHIPS = ["Trending", "Earnings this week", "High momentum", "AI & Tech", "Dividend plays", "Energy"];
 
-const SAMPLE = [
-  { id: "1", ticker: "NVDA", name: "NVIDIA Corp", strategy: "EMA Cross + RSI", sharpe: 2.14, win_rate: 0.72, price: 892.47, change: 2.34, status: "go" },
-  { id: "2", ticker: "AAPL", name: "Apple Inc", strategy: "Bollinger Squeeze", sharpe: 1.87, win_rate: 0.65, price: 213.25, change: 0.87, status: "go" },
-  { id: "3", ticker: "XOM", name: "Exxon Mobil", strategy: "MACD Divergence", sharpe: 1.62, win_rate: 0.61, price: 118.92, change: -1.23, status: "nogo" },
-  { id: "4", ticker: "JPM", name: "JPMorgan Chase", strategy: "Mean Reversion", sharpe: 1.54, win_rate: 0.58, price: 198.34, change: 0.45, status: "go" },
-  { id: "5", ticker: "TSLA", name: "Tesla Inc", strategy: "Momentum Breakout", sharpe: 1.91, win_rate: 0.55, price: 245.18, change: -3.12, status: "pending" },
-  { id: "6", ticker: "AMZN", name: "Amazon.com", strategy: "EMA Cross + RSI", sharpe: 1.78, win_rate: 0.63, price: 186.75, change: 1.56, status: "go" },
-  { id: "7", ticker: "META", name: "Meta Platforms", strategy: "Volume Profile", sharpe: 1.69, win_rate: 0.60, price: 502.30, change: 0.92, status: "pending" },
-  { id: "8", ticker: "MSFT", name: "Microsoft Corp", strategy: "Bollinger Squeeze", sharpe: 1.83, win_rate: 0.67, price: 420.15, change: 1.18, status: "go" },
+const SHOWCASE_TICKERS = [
+  { ticker: "NVDA", name: "NVIDIA Corp", strategy: "EMA Cross + RSI", sharpe: 2.14, win_rate: 0.72, status: "go" },
+  { ticker: "AAPL", name: "Apple Inc", strategy: "Bollinger Squeeze", sharpe: 1.87, win_rate: 0.65, status: "go" },
+  { ticker: "XOM", name: "Exxon Mobil", strategy: "MACD Divergence", sharpe: 1.62, win_rate: 0.61, status: "nogo" },
+  { ticker: "JPM", name: "JPMorgan Chase", strategy: "Mean Reversion", sharpe: 1.54, win_rate: 0.58, status: "go" },
+  { ticker: "TSLA", name: "Tesla Inc", strategy: "Momentum Breakout", sharpe: 1.91, win_rate: 0.55, status: "pending" },
+  { ticker: "AMZN", name: "Amazon.com", strategy: "EMA Cross + RSI", sharpe: 1.78, win_rate: 0.63, status: "go" },
+  { ticker: "META", name: "Meta Platforms", strategy: "Volume Profile", sharpe: 1.69, win_rate: 0.60, status: "pending" },
+  { ticker: "MSFT", name: "Microsoft Corp", strategy: "Bollinger Squeeze", sharpe: 1.83, win_rate: 0.67, status: "go" },
 ];
 
 export default function HomePage() {
   const [activeChip, setActiveChip] = useState<string | null>(null);
+  const [liveQuotes, setLiveQuotes] = useState<Record<string, { price: number; change_pct: number }>>({});
   const router = useRouter();
+
+  // Fetch live prices for showcase tickers
+  useEffect(() => {
+    async function loadPrices() {
+      const quotes: Record<string, { price: number; change_pct: number }> = {};
+      for (let i = 0; i < SHOWCASE_TICKERS.length; i += 4) {
+        const batch = SHOWCASE_TICKERS.slice(i, i + 4);
+        const results = await Promise.allSettled(
+          batch.map((t) => fetch(`/api/stock/${t.ticker}/quote`).then((r) => r.json()))
+        );
+        results.forEach((r, idx) => {
+          if (r.status === "fulfilled" && r.value?.price) {
+            quotes[batch[idx].ticker] = { price: r.value.price, change_pct: r.value.change_pct };
+          }
+        });
+      }
+      setLiveQuotes(quotes);
+    }
+    loadPrices();
+  }, []);
+
+  const SAMPLE = SHOWCASE_TICKERS.map((t, i) => ({
+    id: String(i + 1),
+    ...t,
+    price: liveQuotes[t.ticker]?.price ?? 0,
+    change: liveQuotes[t.ticker]?.change_pct ?? 0,
+  }));
 
   return (
     <div className="relative overflow-hidden">

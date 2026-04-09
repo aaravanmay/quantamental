@@ -47,8 +47,21 @@ export default function PortfolioPage() {
   const [newSector, setNewSector] = useState("");
 
   useEffect(() => {
-    // TODO: Fetch from Supabase
-    setHoldings([]);
+    async function loadHoldings() {
+      try {
+        const { getSupabase } = await import("@/lib/supabase");
+        const supabase = getSupabase();
+        const { data } = await supabase
+          .from("portfolio_holdings")
+          .select("*")
+          .eq("user_id", "default")
+          .order("created_at", { ascending: false });
+        if (data) setHoldings(data);
+      } catch {
+        // Supabase not configured — use empty array
+      }
+    }
+    loadHoldings();
   }, []);
 
   const totalValue = holdings.reduce(
@@ -81,7 +94,20 @@ export default function PortfolioPage() {
     setNewCost("");
     setNewSector("");
     setShowAddForm(false);
-    // TODO: Save to Supabase
+
+    // Persist to Supabase
+    try {
+      import("@/lib/supabase").then(({ getSupabase }) => {
+        const supabase = getSupabase();
+        supabase.from("portfolio_holdings").insert({
+          user_id: "default",
+          ticker: holding.ticker,
+          shares: holding.shares,
+          avg_cost: holding.avg_cost,
+          sector: holding.sector,
+        }).then(() => {});
+      });
+    } catch {}
   }
 
   async function handleScan() {
