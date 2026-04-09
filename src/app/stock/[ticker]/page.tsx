@@ -268,45 +268,114 @@ export default function StockDetailPage({
 
             {tab === "fundamentals" && (
               <div>
-                {fundamentals ? (
-                  <div className="space-y-6">
-                    {fundamentals.ratios && fundamentals.ratios[0] && (
+                {fundamentals && (fundamentals.ratios?.length > 0 || fundamentals.metrics?.length > 0 || fundamentals.profile?.length > 0) ? (
+                  <div className="space-y-8">
+                    {/* Company Profile */}
+                    {fundamentals.profile?.[0] && (
                       <div>
                         <h3 className="mb-3 text-[10px] uppercase tracking-wider font-medium text-[#868F97]">
-                          Key Ratios
+                          Company Overview
+                        </h3>
+                        <p className="text-[13px] text-[#a0a7ae] leading-relaxed mb-4">
+                          {fundamentals.profile[0].description?.slice(0, 300)}
+                          {fundamentals.profile[0].description?.length > 300 ? "..." : ""}
+                        </p>
+                        <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
+                          {[
+                            { label: "Sector", value: fundamentals.profile[0].sector },
+                            { label: "Industry", value: fundamentals.profile[0].industry },
+                            { label: "CEO", value: fundamentals.profile[0].ceo },
+                            { label: "Employees", value: fundamentals.profile[0].fullTimeEmployees?.toLocaleString() },
+                            { label: "Exchange", value: fundamentals.profile[0].exchangeFullName },
+                            { label: "IPO Date", value: fundamentals.profile[0].ipoDate },
+                            { label: "Beta", value: fundamentals.profile[0].beta?.toFixed(2) },
+                            { label: "52W Range", value: fundamentals.profile[0].range },
+                          ].filter(s => s.value).map((s) => (
+                            <div key={s.label} className="glass rounded-lg px-3 py-2.5" style={{ boxShadow: "0 0 40px -15px rgba(71,159,250,0.04), 0 8px 20px -8px rgba(0,0,0,0.25)" }}>
+                              <div className="text-[10px] uppercase tracking-wider text-[#868F97]">{s.label}</div>
+                              <div className="mt-0.5 text-[13px] text-white truncate">{s.value}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Key Metrics */}
+                    {fundamentals.metrics?.[0] && (
+                      <div>
+                        <h3 className="mb-3 text-[10px] uppercase tracking-wider font-medium text-[#868F97]">
+                          Valuation & Metrics
                         </h3>
                         <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
-                          {Object.entries(fundamentals.ratios[0])
-                            .filter(
-                              ([k]) =>
-                                [
-                                  "currentRatio",
-                                  "returnOnEquity",
-                                  "debtEquityRatio",
-                                  "grossProfitMargin",
-                                  "priceEarningsRatio",
-                                  "priceToBookRatio",
-                                ].includes(k)
-                            )
-                            .map(([k, v]) => (
-                              <div
-                                key={k}
-                                className="glass rounded-lg px-3 py-2.5"
-                                style={{
-                                  boxShadow:
-                                    "0 0 40px -15px rgba(71,159,250,0.04), 0 8px 20px -8px rgba(0,0,0,0.25)",
-                                }}
-                              >
-                                <div className="text-[10px] uppercase tracking-wider text-[#868F97]">
-                                  {k}
-                                </div>
-                                <div className="mt-0.5 text-[14px] font-mono tabular-nums text-white">
-                                  {typeof v === "number"
-                                    ? v.toFixed(2)
-                                    : "\u2014"}
-                                </div>
+                          {[
+                            { label: "Market Cap", value: fundamentals.metrics[0].marketCap, fmt: "currency" },
+                            { label: "Enterprise Value", value: fundamentals.metrics[0].enterpriseValue, fmt: "currency" },
+                            { label: "EV/EBITDA", value: fundamentals.metrics[0].evToEBITDA, fmt: "ratio" },
+                            { label: "EV/Sales", value: fundamentals.metrics[0].evToSales, fmt: "ratio" },
+                            { label: "Current Ratio", value: fundamentals.metrics[0].currentRatio, fmt: "ratio" },
+                            { label: "Debt/Equity", value: fundamentals.metrics[0].netDebtToEBITDA, fmt: "ratio" },
+                            { label: "EV/FCF", value: fundamentals.metrics[0].evToFreeCashFlow, fmt: "ratio" },
+                            { label: "Revenue/Share", value: fundamentals.metrics[0].revenuePerShare, fmt: "currency" },
+                          ].filter(s => s.value != null).map((s) => (
+                            <div key={s.label} className="glass rounded-lg px-3 py-2.5" style={{ boxShadow: "0 0 40px -15px rgba(71,159,250,0.04), 0 8px 20px -8px rgba(0,0,0,0.25)" }}>
+                              <div className="text-[10px] uppercase tracking-wider text-[#868F97]">{s.label}</div>
+                              <div className="mt-0.5 text-[14px] font-mono tabular-nums text-white">
+                                {s.fmt === "currency" ? formatCurrency(s.value as number, true) : (s.value as number).toFixed(2)}
                               </div>
-                            ))}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Profitability Ratios */}
+                    {fundamentals.ratios?.[0] && (
+                      <div>
+                        <h3 className="mb-3 text-[10px] uppercase tracking-wider font-medium text-[#868F97]">
+                          Profitability & Margins
+                        </h3>
+                        <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
+                          {[
+                            { label: "Gross Margin", value: fundamentals.ratios[0].grossProfitMargin, fmt: "pct" },
+                            { label: "Operating Margin", value: fundamentals.ratios[0].operatingProfitMargin, fmt: "pct" },
+                            { label: "Net Margin", value: fundamentals.ratios[0].netProfitMargin, fmt: "pct" },
+                            { label: "ROE", value: fundamentals.ratios[0].returnOnEquity, fmt: "pct" },
+                            { label: "ROA", value: fundamentals.ratios[0].returnOnAssets, fmt: "pct" },
+                            { label: "ROIC", value: fundamentals.ratios[0].returnOnCapitalEmployed, fmt: "pct" },
+                            { label: "Dividend Yield", value: fundamentals.ratios[0].dividendYield, fmt: "pct" },
+                            { label: "Payout Ratio", value: fundamentals.ratios[0].payoutRatio, fmt: "pct" },
+                          ].filter(s => s.value != null).map((s) => (
+                            <div key={s.label} className="glass rounded-lg px-3 py-2.5" style={{ boxShadow: "0 0 40px -15px rgba(71,159,250,0.04), 0 8px 20px -8px rgba(0,0,0,0.25)" }}>
+                              <div className="text-[10px] uppercase tracking-wider text-[#868F97]">{s.label}</div>
+                              <div className="mt-0.5 text-[14px] font-mono tabular-nums text-white">
+                                {s.fmt === "pct" ? `${((s.value as number) * 100).toFixed(1)}%` : (s.value as number).toFixed(2)}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Revenue Trend */}
+                    {fundamentals.income?.length > 1 && (
+                      <div>
+                        <h3 className="mb-3 text-[10px] uppercase tracking-wider font-medium text-[#868F97]">
+                          Revenue Trend (Annual)
+                        </h3>
+                        <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
+                          {fundamentals.income.slice(0, 4).reverse().map((yr: any) => (
+                            <div key={yr.date} className="glass rounded-lg px-3 py-2.5" style={{ boxShadow: "0 0 40px -15px rgba(71,159,250,0.04), 0 8px 20px -8px rgba(0,0,0,0.25)" }}>
+                              <div className="text-[10px] uppercase tracking-wider text-[#868F97]">
+                                FY {yr.fiscalYear || yr.date?.slice(0,4)}
+                              </div>
+                              <div className="mt-0.5 text-[14px] font-mono tabular-nums text-white">
+                                {formatCurrency(yr.revenue, true)}
+                              </div>
+                              <div className="text-[11px] font-mono tabular-nums text-[#868F97]">
+                                Net: {formatCurrency(yr.netIncome, true)}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     )}
@@ -319,11 +388,6 @@ export default function StockDetailPage({
                         ? "Loading fundamentals..."
                         : "No fundamental data available."}
                     </p>
-                    {!loading && (
-                      <p className="mt-1 text-[11px] text-[#555]">
-                        Configure your FMP API key in Settings to see ratios, margins, and balance sheet data.
-                      </p>
-                    )}
                   </div>
                 )}
               </div>

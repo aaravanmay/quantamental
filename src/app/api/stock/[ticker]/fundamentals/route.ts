@@ -9,18 +9,22 @@ export async function GET(
   const { ticker } = await params;
   const t = ticker.toUpperCase();
 
-  // Fetch ratios, key metrics, and insider trades in parallel (stable API)
-  const [ratiosRes, metricsRes, insiderRes] = await Promise.allSettled([
+  // Fetch ratios, key metrics, profile, and income statement in parallel (stable API, annual — free tier)
+  const [ratiosRes, metricsRes, profileRes, incomeRes] = await Promise.allSettled([
     fetch(
-      `https://financialmodelingprep.com/stable/ratios?symbol=${t}&period=quarter&limit=1&apikey=${FMP_KEY}`,
+      `https://financialmodelingprep.com/stable/ratios?symbol=${t}&limit=1&apikey=${FMP_KEY}`,
       { next: { revalidate: 3600 } }
     ),
     fetch(
-      `https://financialmodelingprep.com/stable/key-metrics?symbol=${t}&period=quarter&limit=1&apikey=${FMP_KEY}`,
+      `https://financialmodelingprep.com/stable/key-metrics?symbol=${t}&limit=1&apikey=${FMP_KEY}`,
       { next: { revalidate: 3600 } }
     ),
     fetch(
-      `https://financialmodelingprep.com/stable/insider-trading?symbol=${t}&limit=10&apikey=${FMP_KEY}`,
+      `https://financialmodelingprep.com/stable/profile?symbol=${t}&apikey=${FMP_KEY}`,
+      { next: { revalidate: 3600 } }
+    ),
+    fetch(
+      `https://financialmodelingprep.com/stable/income-statement?symbol=${t}&limit=4&apikey=${FMP_KEY}`,
       { next: { revalidate: 3600 } }
     ),
   ]);
@@ -33,10 +37,14 @@ export async function GET(
     metricsRes.status === "fulfilled" && metricsRes.value.ok
       ? await metricsRes.value.json()
       : [];
-  const insider =
-    insiderRes.status === "fulfilled" && insiderRes.value.ok
-      ? await insiderRes.value.json()
+  const profile =
+    profileRes.status === "fulfilled" && profileRes.value.ok
+      ? await profileRes.value.json()
+      : [];
+  const income =
+    incomeRes.status === "fulfilled" && incomeRes.value.ok
+      ? await incomeRes.value.json()
       : [];
 
-  return NextResponse.json({ ratios, metrics, insider });
+  return NextResponse.json({ ratios, metrics, profile, income });
 }
