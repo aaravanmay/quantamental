@@ -80,22 +80,18 @@ export default function WatchlistPage() {
   }
 
   return (
-    <div className="max-w-[1220px] mx-auto px-6 py-8">
+    <div className="relative overflow-hidden">
+      {/* Glow */}
+      <div className="pointer-events-none absolute left-1/2 -top-20 -translate-x-1/2 w-[600px] h-[400px]"
+        style={{ background: "radial-gradient(ellipse, rgba(255,191,0,0.04) 0%, transparent 70%)" }} />
+
+      <div className="max-w-[1220px] mx-auto px-6 py-8">
       <ScrollReveal>
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1
-              className="text-[32px] font-semibold tracking-tight"
-              style={{
-                background: "linear-gradient(180deg, #fff 30%, rgba(255,255,255,0.4) 100%)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-              }}
-            >
-              Watchlist
-            </h1>
-            <p className="mt-2 text-[14px] text-[#868F97]">
-              Track stocks you're interested in.
+            <h1 className="page-heading">Watchlist</h1>
+            <p className="mt-2 text-[14px] text-[var(--text-secondary)]">
+              Track stocks you&apos;re interested in. Add tickers or use the star icon on any stock page.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -184,6 +180,77 @@ export default function WatchlistPage() {
           )}
         </div>
       </ScrollReveal>
+
+      {/* Suggested Tickers */}
+      <ScrollReveal delay={200}>
+        <div className="mt-10">
+          <h2 className="text-[12px] font-medium uppercase tracking-wider text-[var(--text-muted)] mb-4">
+            Popular tickers to watch
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "TSLA", "META", "JPM", "V", "UNH", "XOM", "JNJ"].map((ticker) => (
+              <button
+                key={ticker}
+                onClick={async () => {
+                  await fetch("/api/watchlist", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ ticker }),
+                  });
+                  const res = await fetch("/api/watchlist");
+                  if (res.ok) {
+                    const data = await res.json();
+                    setItems(data.items || []);
+                  }
+                }}
+                disabled={items.some((i) => i.ticker === ticker)}
+                className={cn(
+                  "rounded-lg px-3 py-2 text-[12px] font-mono font-medium transition-all",
+                  items.some((i) => i.ticker === ticker)
+                    ? "bg-[rgba(255,191,0,0.08)] text-[#ffbf00] border border-[rgba(255,191,0,0.15)]"
+                    : "glass hover:bg-[var(--glass-hover)] text-[var(--text-secondary)] hover:text-white"
+                )}
+              >
+                {items.some((i) => i.ticker === ticker) ? `★ ${ticker}` : `+ ${ticker}`}
+              </button>
+            ))}
+          </div>
+        </div>
+      </ScrollReveal>
+
+      {/* Stats */}
+      {items.length > 0 && (
+        <ScrollReveal delay={300}>
+          <div className="mt-10 grid grid-cols-3 gap-3">
+            <div className="glass rounded-xl p-4 card-shadow">
+              <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Watching</div>
+              <div className="text-[24px] font-mono font-semibold text-white">{items.length}</div>
+              <div className="text-[11px] text-[var(--text-secondary)]">stocks</div>
+            </div>
+            <div className="glass rounded-xl p-4 card-shadow">
+              <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Best Performer</div>
+              <div className="text-[24px] font-mono font-semibold text-[var(--gain)]">
+                {(() => {
+                  const best = Object.entries(quotes).sort((a, b) => (b[1]?.change_pct || 0) - (a[1]?.change_pct || 0))[0];
+                  return best ? best[0] : "—";
+                })()}
+              </div>
+              <div className="text-[11px] text-[var(--text-secondary)]">today</div>
+            </div>
+            <div className="glass rounded-xl p-4 card-shadow">
+              <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Worst Performer</div>
+              <div className="text-[24px] font-mono font-semibold text-[var(--loss)]">
+                {(() => {
+                  const worst = Object.entries(quotes).sort((a, b) => (a[1]?.change_pct || 0) - (b[1]?.change_pct || 0))[0];
+                  return worst ? worst[0] : "—";
+                })()}
+              </div>
+              <div className="text-[11px] text-[var(--text-secondary)]">today</div>
+            </div>
+          </div>
+        </ScrollReveal>
+      )}
+    </div>
     </div>
   );
 }

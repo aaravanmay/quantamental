@@ -47,24 +47,47 @@ export default function EarningsPage() {
   const sortedDates = Object.keys(grouped).sort();
 
   return (
+    <div className="relative overflow-hidden">
+      <div className="pointer-events-none absolute left-1/2 -top-20 -translate-x-1/2 w-[600px] h-[400px]"
+        style={{ background: "radial-gradient(ellipse, rgba(71,159,250,0.05) 0%, transparent 70%)" }} />
+
     <div className="max-w-[1220px] mx-auto px-6 py-8">
       <ScrollReveal>
         <div className="mb-8">
-          <h1
-            className="text-[32px] font-semibold tracking-tight"
-            style={{
-              background: "linear-gradient(180deg, #fff 30%, rgba(255,255,255,0.4) 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-            }}
-          >
-            Earnings Calendar
-          </h1>
-          <p className="mt-2 text-[14px] text-[#868F97]">
+          <h1 className="page-heading">Earnings Calendar</h1>
+          <p className="mt-2 text-[14px] text-[var(--text-secondary)]">
             Upcoming earnings reports for the next 2 weeks.
           </p>
         </div>
       </ScrollReveal>
+
+      {/* Stats */}
+      {!loading && earnings.length > 0 && (
+        <ScrollReveal delay={50}>
+          <div className="mb-8 grid grid-cols-4 gap-3">
+            <div className="glass rounded-xl p-4 card-shadow">
+              <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Total Reports</div>
+              <div className="text-[24px] font-mono font-semibold text-white">{earnings.length}</div>
+            </div>
+            <div className="glass rounded-xl p-4 card-shadow">
+              <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Reporting Days</div>
+              <div className="text-[24px] font-mono font-semibold text-white">{sortedDates.length}</div>
+            </div>
+            <div className="glass rounded-xl p-4 card-shadow">
+              <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Pre-Market</div>
+              <div className="text-[24px] font-mono font-semibold text-[#ffbf00]">
+                {earnings.filter((e: any) => e.hour === "bmo").length}
+              </div>
+            </div>
+            <div className="glass rounded-xl p-4 card-shadow">
+              <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">After Hours</div>
+              <div className="text-[24px] font-mono font-semibold text-[#9382ff]">
+                {earnings.filter((e: any) => e.hour === "amc").length}
+              </div>
+            </div>
+          </div>
+        </ScrollReveal>
+      )}
 
       {loading ? (
         <div className="py-20 text-center">
@@ -156,6 +179,7 @@ export default function EarningsPage() {
           })}
         </div>
       )}
+    </div>
     </div>
   );
 }
