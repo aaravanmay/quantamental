@@ -171,45 +171,72 @@ export default function StockFinderPage() {
           </div>
         </ScrollReveal>
 
-        {/* Chip Filters */}
+        {/* Filters */}
         <ScrollReveal delay={100}>
-          <div className="glass-sm mb-10 p-4">
-            <div className="flex flex-wrap items-center gap-2">
-              {SECTORS.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setActiveSector(s)}
-                  className={s === activeSector ? "chip-active" : "chip"}
-                >
-                  {s}
-                </button>
-              ))}
-              <div
-                className="mx-1 h-4 w-px"
-                style={{ background: "rgba(255,255,255,0.08)" }}
-              />
-              {DIRECTIONS.map((d) => (
-                <button
-                  key={d}
-                  onClick={() => setActiveDirection(d)}
-                  className={d === activeDirection ? "chip-active" : "chip"}
-                >
-                  {d}
-                </button>
-              ))}
-              <div
-                className="mx-1 h-4 w-px"
-                style={{ background: "rgba(255,255,255,0.08)" }}
-              />
-              {STATUSES.map((st) => (
-                <button
-                  key={st}
-                  onClick={() => setActiveStatus(st)}
-                  className={st === activeStatus ? "chip-active" : "chip"}
-                >
-                  {st}
-                </button>
-              ))}
+          <div className="mb-8 grid grid-cols-3 gap-3">
+            {/* Sector */}
+            <div className="glass rounded-xl p-3">
+              <div className="text-[10px] uppercase tracking-wider text-[#555] mb-2">Sector</div>
+              <div className="flex flex-wrap gap-1.5">
+                {SECTORS.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setActiveSector(s)}
+                    className={cn(
+                      "rounded-md px-2.5 py-1 text-[11px] font-medium transition-all",
+                      s === activeSector
+                        ? "bg-[rgba(71,159,250,0.15)] text-white border border-[rgba(71,159,250,0.25)]"
+                        : "text-[#868F97] hover:text-white bg-[rgba(255,255,255,0.03)] border border-transparent"
+                    )}
+                  >
+                    {s.replace("All Sectors", "All")}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {/* Direction */}
+            <div className="glass rounded-xl p-3">
+              <div className="text-[10px] uppercase tracking-wider text-[#555] mb-2">Direction</div>
+              <div className="flex flex-wrap gap-1.5">
+                {DIRECTIONS.map((d) => (
+                  <button
+                    key={d}
+                    onClick={() => setActiveDirection(d)}
+                    className={cn(
+                      "rounded-md px-2.5 py-1 text-[11px] font-medium transition-all",
+                      d === activeDirection
+                        ? d === "LONG" ? "bg-[rgba(78,190,150,0.15)] text-[#4EBE96] border border-[rgba(78,190,150,0.25)]"
+                          : d === "SHORT" ? "bg-[rgba(248,113,113,0.15)] text-[#f87171] border border-[rgba(248,113,113,0.25)]"
+                          : "bg-[rgba(71,159,250,0.15)] text-white border border-[rgba(71,159,250,0.25)]"
+                        : "text-[#868F97] hover:text-white bg-[rgba(255,255,255,0.03)] border border-transparent"
+                    )}
+                  >
+                    {d.replace("All Directions", "All")}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {/* Status */}
+            <div className="glass rounded-xl p-3">
+              <div className="text-[10px] uppercase tracking-wider text-[#555] mb-2">Status</div>
+              <div className="flex flex-wrap gap-1.5">
+                {STATUSES.map((st) => (
+                  <button
+                    key={st}
+                    onClick={() => setActiveStatus(st)}
+                    className={cn(
+                      "rounded-md px-2.5 py-1 text-[11px] font-medium transition-all",
+                      st === activeStatus
+                        ? st === "GO" ? "bg-[rgba(78,190,150,0.15)] text-[#4EBE96] border border-[rgba(78,190,150,0.25)]"
+                          : st === "NO-GO" ? "bg-[rgba(248,113,113,0.15)] text-[#f87171] border border-[rgba(248,113,113,0.25)]"
+                          : "bg-[rgba(71,159,250,0.15)] text-white border border-[rgba(71,159,250,0.25)]"
+                        : "text-[#868F97] hover:text-white bg-[rgba(255,255,255,0.03)] border border-transparent"
+                    )}
+                  >
+                    {st.replace("All Status", "All")}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </ScrollReveal>
