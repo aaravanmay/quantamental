@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, use } from "react";
-import { ArrowLeft, RefreshCw, BarChart3, Newspaper, Brain } from "lucide-react";
+import { ArrowLeft, RefreshCw, BarChart3, Newspaper, Brain, Star, Bell } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { PriceChart } from "@/components/PriceChart";
@@ -29,6 +29,43 @@ export default function StockDetailPage({
   const [thesis, setThesis] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [validating, setValidating] = useState(false);
+  const [inWatchlist, setInWatchlist] = useState(false);
+  const [alertPrice, setAlertPrice] = useState("");
+  const [showAlertForm, setShowAlertForm] = useState(false);
+
+  // Check if in watchlist
+  useEffect(() => {
+    fetch("/api/watchlist")
+      .then((r) => r.json())
+      .then((data) => {
+        const found = (data.items || []).some((i: any) => i.ticker === upperTicker);
+        setInWatchlist(found);
+      })
+      .catch(() => {});
+  }, [upperTicker]);
+
+  async function toggleWatchlist() {
+    if (inWatchlist) {
+      await fetch("/api/watchlist", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticker: upperTicker }) });
+      setInWatchlist(false);
+    } else {
+      await fetch("/api/watchlist", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticker: upperTicker }) });
+      setInWatchlist(true);
+    }
+  }
+
+  async function createAlert() {
+    if (!alertPrice) return;
+    const currentPrice = quote?.price || 0;
+    const target = Number(alertPrice);
+    await fetch("/api/alerts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ticker: upperTicker, target_price: target, direction: target > currentPrice ? "above" : "below" }),
+    });
+    setAlertPrice("");
+    setShowAlertForm(false);
+  }
 
   useEffect(() => {
     async function load() {
@@ -168,26 +205,67 @@ export default function StockDetailPage({
                 )}
               </div>
 
-              {/* Generate Thesis button with glow ring */}
-              <div className="relative">
-                <div
-                  className="absolute inset-0 rounded-lg pointer-events-none"
-                  style={{
-                    boxShadow:
-                      "0 0 30px 6px rgba(71,159,250,0.12)",
-                  }}
-                />
+              <div className="flex items-center gap-2">
+                {/* Watchlist Star */}
                 <button
-                  onClick={handleGenerateThesis}
-                  disabled={validating}
-                  className="relative flex items-center gap-2 bg-[rgba(71,159,250,0.12)] text-accent border border-[rgba(71,159,250,0.2)] rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50 transition-all hover:bg-[rgba(71,159,250,0.2)] hover:scale-[1.02]"
+                  onClick={toggleWatchlist}
+                  className="flex items-center justify-center w-9 h-9 rounded-lg transition-all hover:scale-[1.05]"
+                  style={{
+                    background: inWatchlist ? "rgba(255,191,0,0.12)" : "rgba(255,255,255,0.06)",
+                    border: inWatchlist ? "1px solid rgba(255,191,0,0.25)" : "1px solid rgba(255,255,255,0.1)",
+                  }}
+                  title={inWatchlist ? "Remove from watchlist" : "Add to watchlist"}
                 >
-                  <RefreshCw
-                    size={14}
-                    className={validating ? "animate-spin" : ""}
-                  />
-                  {validating ? "Analyzing..." : "Generate Thesis"}
+                  <Star size={16} className={inWatchlist ? "text-[#ffbf00] fill-[#ffbf00]" : "text-[#868F97]"} />
                 </button>
+
+                {/* Price Alert Bell */}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowAlertForm(!showAlertForm)}
+                    className="flex items-center justify-center w-9 h-9 rounded-lg transition-all hover:scale-[1.05]"
+                    style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}
+                    title="Set price alert"
+                  >
+                    <Bell size={16} className="text-[#868F97]" />
+                  </button>
+                  {showAlertForm && (
+                    <div className="absolute right-0 top-11 z-50 glass rounded-xl p-3 w-56 border border-[rgba(255,255,255,0.1)]" style={{ boxShadow: "0 8px 30px rgba(0,0,0,0.4)" }}>
+                      <div className="text-[11px] text-[#868F97] mb-2">Alert when price reaches:</div>
+                      <div className="flex gap-2">
+                        <input
+                          value={alertPrice}
+                          onChange={(e) => setAlertPrice(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && createAlert()}
+                          placeholder="$250.00"
+                          type="number"
+                          className="glass-input flex-1 px-2 py-1.5 text-sm font-mono text-white placeholder:text-[#555]"
+                        />
+                        <button
+                          onClick={createAlert}
+                          disabled={!alertPrice}
+                          className="rounded-md px-3 py-1.5 text-[11px] font-medium text-white disabled:opacity-40"
+                          style={{ background: "rgba(71,159,250,0.15)", border: "1px solid rgba(71,159,250,0.25)" }}
+                        >
+                          Set
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Generate Thesis */}
+                <div className="relative">
+                  <div className="absolute inset-0 rounded-lg pointer-events-none" style={{ boxShadow: "0 0 30px 6px rgba(71,159,250,0.12)" }} />
+                  <button
+                    onClick={handleGenerateThesis}
+                    disabled={validating}
+                    className="relative flex items-center gap-2 bg-[rgba(71,159,250,0.12)] text-accent border border-[rgba(71,159,250,0.2)] rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50 transition-all hover:bg-[rgba(71,159,250,0.2)] hover:scale-[1.02]"
+                  >
+                    <RefreshCw size={14} className={validating ? "animate-spin" : ""} />
+                    {validating ? "Analyzing..." : "Generate Thesis"}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

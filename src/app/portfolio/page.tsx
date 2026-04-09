@@ -335,16 +335,84 @@ export default function PortfolioPage() {
         </ScrollReveal>
 
         {/* ══════════════════════════════════════════════════════
-            SECTION 2.5 — Portfolio Equity Curve
+            SECTION 2.5 — Portfolio Allocation + Equity Curve
         ══════════════════════════════════════════════════════ */}
         <ScrollReveal delay={120}>
-          <div className="mb-10">
-            <EquityCurve
-              data={PORTFOLIO_EQUITY_DATA}
-              height={200}
-              color="#4EBE96"
-              label="Portfolio Performance"
-            />
+          <div className="mb-10 grid md:grid-cols-2 gap-4">
+            {/* Allocation Donut */}
+            <div className="glass rounded-2xl p-5" style={dramaticShadow}>
+              <h3 className="text-[11px] uppercase tracking-wider text-[#555] mb-4">Sector Allocation</h3>
+              {holdings.length === 0 ? (
+                <div className="py-10 text-center text-[13px] text-[#868F97]">Add holdings to see allocation</div>
+              ) : (
+                <div className="flex items-center gap-6">
+                  {/* Simple SVG donut */}
+                  <svg width="140" height="140" viewBox="0 0 140 140">
+                    {(() => {
+                      const sectorTotals: Record<string, number> = {};
+                      holdings.forEach((h) => {
+                        const s = h.sector || "Other";
+                        sectorTotals[s] = (sectorTotals[s] || 0) + h.shares * h.avg_cost;
+                      });
+                      const total = Object.values(sectorTotals).reduce((a, b) => a + b, 0);
+                      const colors = ["#479FFA", "#4EBE96", "#FFA16C", "#f87171", "#9382ff", "#ffbf00", "#68d4f8", "#ff6bcb"];
+                      let cumulative = 0;
+                      return Object.entries(sectorTotals).map(([sector, value], i) => {
+                        const pct = value / total;
+                        const startAngle = cumulative * 2 * Math.PI - Math.PI / 2;
+                        cumulative += pct;
+                        const endAngle = cumulative * 2 * Math.PI - Math.PI / 2;
+                        const largeArc = pct > 0.5 ? 1 : 0;
+                        const r = 55;
+                        const cx = 70, cy = 70;
+                        const x1 = cx + r * Math.cos(startAngle);
+                        const y1 = cy + r * Math.sin(startAngle);
+                        const x2 = cx + r * Math.cos(endAngle);
+                        const y2 = cy + r * Math.sin(endAngle);
+                        return (
+                          <path
+                            key={sector}
+                            d={`M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} Z`}
+                            fill={colors[i % colors.length]}
+                            opacity={0.8}
+                          />
+                        );
+                      });
+                    })()}
+                    <circle cx="70" cy="70" r="30" fill="#0a0a0a" />
+                  </svg>
+                  {/* Legend */}
+                  <div className="space-y-1.5">
+                    {(() => {
+                      const sectorTotals: Record<string, number> = {};
+                      holdings.forEach((h) => {
+                        const s = h.sector || "Other";
+                        sectorTotals[s] = (sectorTotals[s] || 0) + h.shares * h.avg_cost;
+                      });
+                      const total = Object.values(sectorTotals).reduce((a, b) => a + b, 0);
+                      const colors = ["#479FFA", "#4EBE96", "#FFA16C", "#f87171", "#9382ff", "#ffbf00", "#68d4f8", "#ff6bcb"];
+                      return Object.entries(sectorTotals).map(([sector, value], i) => (
+                        <div key={sector} className="flex items-center gap-2">
+                          <div className="w-2.5 h-2.5 rounded-sm" style={{ background: colors[i % colors.length] }} />
+                          <span className="text-[12px] text-[#868F97]">
+                            {sector} <span className="text-[#555]">{((value / total) * 100).toFixed(0)}%</span>
+                          </span>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+              )}
+            </div>
+            {/* Equity Curve */}
+            <div className="glass rounded-2xl p-5" style={dramaticShadow}>
+              <EquityCurve
+                data={PORTFOLIO_EQUITY_DATA.length > 0 ? PORTFOLIO_EQUITY_DATA : [100000]}
+                height={160}
+                color="#4EBE96"
+                label={holdings.length > 0 ? "Portfolio Performance" : "Add holdings to track performance"}
+              />
+            </div>
           </div>
         </ScrollReveal>
 

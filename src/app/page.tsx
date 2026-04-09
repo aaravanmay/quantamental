@@ -3,10 +3,11 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import { StockSearch } from "@/components/StockSearch";
 import { ScrollReveal } from "@/components/ScrollReveal";
 import { cn } from "@/lib/utils";
-import { BarChart3, Brain, Shield, TrendingUp, Zap, Search, LineChart, Briefcase } from "lucide-react";
+import { BarChart3, Brain, Shield, TrendingUp, Zap, Search, LineChart, Briefcase, Newspaper } from "lucide-react";
 
 const CHIPS = ["Trending", "Earnings this week", "High momentum", "AI & Tech", "Dividend plays", "Energy"];
 
@@ -25,6 +26,19 @@ export default function HomePage() {
   const [activeChip, setActiveChip] = useState<string | null>(null);
   const [liveQuotes, setLiveQuotes] = useState<Record<string, { price: number; change_pct: number }>>({});
   const router = useRouter();
+
+  const [marketNews, setMarketNews] = useState<any[]>([]);
+
+  // Fetch market news
+  useEffect(() => {
+    async function loadNews() {
+      try {
+        const res = await fetch("/api/news");
+        if (res.ok) setMarketNews(await res.json());
+      } catch {}
+    }
+    loadNews();
+  }, []);
 
   // Fetch live prices for showcase tickers
   useEffect(() => {
@@ -422,6 +436,43 @@ export default function HomePage() {
           </ScrollReveal>
         </div>
       </section>
+
+      {/* Market News */}
+      {marketNews.length > 0 && (
+        <section className="max-w-[1220px] mx-auto px-6 py-10">
+          <ScrollReveal>
+            <div className="flex items-center gap-2 mb-5">
+              <Newspaper size={16} className="text-[#479FFA]" />
+              <h2 className="text-[18px] font-semibold text-white">Market News</h2>
+            </div>
+          </ScrollReveal>
+          <ScrollReveal delay={100}>
+            <div className="grid md:grid-cols-2 gap-3">
+              {marketNews.slice(0, 6).map((article: any, i: number) => (
+                <a
+                  key={i}
+                  href={article.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="glass rounded-xl p-4 hover:bg-[rgba(255,255,255,0.04)] transition-all group"
+                  style={{ boxShadow: "0 0 40px -15px rgba(71,159,250,0.04), 0 8px 20px -8px rgba(0,0,0,0.25)" }}
+                >
+                  <h3 className="text-[13px] font-medium text-white leading-snug group-hover:text-accent transition-colors">
+                    {article.headline}
+                  </h3>
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="text-[11px] text-[#868F97]">{article.source}</span>
+                    <span className="text-[11px] text-[#555]">&middot;</span>
+                    <span className="text-[11px] text-[#555]">
+                      {new Date(article.datetime * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                    </span>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </ScrollReveal>
+        </section>
+      )}
 
       {/* ═══════════════════════════════════════════════════════════
           CTA
