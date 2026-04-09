@@ -18,7 +18,7 @@ html { scroll-behavior: smooth; }
   --orange: #FFA16C;
 }
 
-body { background: #000; color: #fff; }
+body { background: var(--bg); color: var(--text); }
 
 ::selection { background: rgba(71,159,250,0.25); }
 
@@ -28,22 +28,22 @@ body { background: #000; color: #fff; }
 
 /* ── Glass ── */
 .glass {
-  background: rgba(255,255,255,0.03);
+  background: var(--glass);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 0.5px solid rgba(255,255,255,0.08);
+  border: 0.5px solid var(--border);
   border-radius: 16px;
 }
 .glass-sm {
-  background: rgba(255,255,255,0.03);
+  background: var(--glass);
   backdrop-filter: blur(8px);
-  border: 0.5px solid rgba(255,255,255,0.08);
+  border: 0.5px solid var(--border);
   border-radius: 10px;
 }
 .glass-input {
   background: rgba(255,255,255,0.04);
   backdrop-filter: blur(8px);
-  border: 0.5px solid rgba(255,255,255,0.08);
+  border: 0.5px solid var(--border);
   border-radius: 99px;
   transition: border-color 0.2s;
 }
@@ -77,7 +77,7 @@ body { background: #000; color: #fff; }
   transition: background 0.15s;
 }
 .stock-table tbody tr:hover td {
-  background: rgba(255,255,255,0.03);
+  background: var(--glass-hover);
 }
 
 /* ── Chips ── */
@@ -88,28 +88,28 @@ body { background: #000; color: #fff; }
   font-size: 13px;
   border-radius: 99px;
   background: rgba(255,255,255,0.04);
-  color: #868F97;
-  border: 0.5px solid rgba(255,255,255,0.08);
+  color: var(--text-secondary);
+  border: 0.5px solid var(--border);
   cursor: pointer;
   transition: all 0.2s;
 }
-.chip:hover { background: rgba(255,255,255,0.08); color: #fff; }
+.chip:hover { background: var(--glass-hover); color: var(--text); }
 .chip-active {
   background: rgba(71,159,250,0.1);
-  color: #479FFA;
+  color: var(--accent);
   border-color: rgba(71,159,250,0.2);
 }
 
 /* ── Badges ── */
-.badge-gain { background: rgba(78,190,150,0.12); color: #4EBE96; }
-.badge-loss { background: rgba(248,113,113,0.12); color: #f87171; }
+.badge-gain { background: rgba(78,190,150,0.12); color: var(--gain); }
+.badge-loss { background: rgba(248,113,113,0.12); color: var(--loss); }
 .sector-badge {
   display: inline-block;
   padding: 3px 10px;
   font-size: 12px;
   border-radius: 6px;
-  background: rgba(255,255,255,0.06);
-  color: #868F97;
+  background: var(--glass-hover);
+  color: var(--text-secondary);
 }
 
 /* ── Pill tabs ── */
@@ -118,14 +118,14 @@ body { background: #000; color: #fff; }
   font-size: 13px;
   font-weight: 500;
   border-radius: 8px;
-  color: #868F97;
+  color: var(--text-secondary);
   transition: all 0.15s;
   cursor: pointer;
   background: transparent;
   border: none;
 }
-.pill-tab:hover { color: #fff; background: rgba(255,255,255,0.06); }
-.pill-tab-active { color: #fff; background: rgba(255,255,255,0.08); }
+.pill-tab:hover { color: var(--text); background: var(--glass-hover); }
+.pill-tab-active { color: var(--text); background: rgba(255,255,255,0.08); }
 
 /* ── Glow effects ── */
 .glow-blue {
@@ -133,13 +133,6 @@ body { background: #000; color: #fff; }
   width: 600px;
   height: 400px;
   background: radial-gradient(ellipse, rgba(71,159,250,0.08) 0%, transparent 70%);
-  pointer-events: none;
-}
-.glow-orange {
-  position: absolute;
-  width: 500px;
-  height: 350px;
-  background: radial-gradient(ellipse, rgba(255,161,108,0.06) 0%, transparent 70%);
   pointer-events: none;
 }
 .glow-green {
@@ -150,44 +143,27 @@ body { background: #000; color: #fff; }
   pointer-events: none;
 }
 
-/* ── 3D product mockup ── */
-.perspective-container {
-  perspective: 1200px;
+/* ── Page heading (consistent across all pages) ── */
+.page-heading {
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  background: linear-gradient(180deg, #fff 30%, rgba(255,255,255,0.4) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
-.product-tilt {
-  transform: rotateX(8deg) rotateY(-4deg) scale(0.98);
-  transition: transform 0.4s ease;
-}
-.product-tilt:hover {
-  transform: rotateX(2deg) rotateY(-1deg) scale(1);
-}
-
-/* ── Section spacing ── */
-.section {
-  padding: 100px 0;
-  position: relative;
-  overflow: hidden;
-}
-.section-sm {
-  padding: 60px 0;
-  position: relative;
-  overflow: hidden;
+.section-heading {
+  font-size: 20px;
+  font-weight: 600;
+  background: linear-gradient(180deg, #fff 40%, rgba(255,255,255,0.5) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
-/* ── Feature icon circles (like Fey) ── */
-.feature-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 14px;
-  background: rgba(255,255,255,0.04);
-  border: 0.5px solid rgba(255,255,255,0.08);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* ── Consistent card shadow ── */
+.card-shadow {
+  box-shadow: 0 0 60px -20px rgba(71,159,250,0.06), 0 20px 40px -20px rgba(0,0,0,0.3);
 }
-
-/* ── Divider ── */
-.divider {
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+.card-shadow-lg {
+  box-shadow: 0 0 80px -20px rgba(71,159,250,0.08), 0 20px 60px -20px rgba(0,0,0,0.4);
 }

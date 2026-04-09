@@ -52,6 +52,44 @@ export function Skeleton({
   );
 }
 
+export function CardGridSkeleton({ count = 6, cols = 3 }: { count?: number; cols?: number }) {
+  return (
+    <div className={`grid gap-2.5`} style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="glass rounded-lg px-3 py-2.5">
+          <Skeleton width="60px" height="10px" className="mb-2" />
+          <Skeleton width="80px" height="16px" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function ChartSkeleton({ height = 380 }: { height?: number }) {
+  return (
+    <div className="glass rounded-lg flex items-center justify-center" style={{ height }}>
+      <div className="flex flex-col items-center gap-2">
+        <Skeleton width="24px" height="24px" rounded="50%" />
+        <Skeleton width="100px" height="12px" />
+      </div>
+    </div>
+  );
+}
+
+export function NewsCardSkeleton({ count = 6 }: { count?: number }) {
+  return (
+    <div className="grid md:grid-cols-2 gap-3">
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="glass rounded-xl p-4">
+          <Skeleton width="100%" height="14px" className="mb-2" />
+          <Skeleton width="70%" height="14px" className="mb-3" />
+          <Skeleton width="120px" height="10px" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function TableSkeleton() {
   const rows = Array.from({ length: 5 });
 

@@ -17,7 +17,8 @@ const TIMEFRAME_LABELS: Record<string, string> = {
 };
 
 export default function PaperTradingPage() {
-  const { autoMode, startingBalance, timeframe } = useSettings();
+  const settings = useSettings();
+  const { autoMode, startingBalance, timeframe } = settings;
   const updateSettings = useUpdateSettings();
   const mode = autoMode ? "auto" : "manual";
 
@@ -235,8 +236,8 @@ export default function PaperTradingPage() {
                 </div>
                 <p className="text-[13px] text-[#868F97] leading-relaxed">
                   GO signals from the Stock Finder will be automatically paper-traded
-                  at next market open. Exit rules: stop-loss at -10%, take-profit at
-                  +25%, time-exit at 120 days.
+                  at next market open. Exit rules: stop-loss at -{settings.stopLossPct}%, take-profit at
+                  +{settings.takeProfitPct}%, max position {settings.maxPositionPct}% of portfolio.
                 </p>
               </div>
             </div>
