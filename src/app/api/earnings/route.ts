@@ -17,15 +17,24 @@ export async function GET(req: NextRequest) {
   if (!res.ok) return NextResponse.json([], { status: 502 });
   const data = await res.json();
 
-  // Filter to well-known stocks (revenue estimate > $1B or symbol length <= 4)
-  const earnings = (data?.earningsCalendar || [])
-    .filter(
-      (e: any) =>
-        e.symbol &&
-        e.symbol.length <= 5 &&
-        (e.revenueEstimate > 500_000_000 || e.epsEstimate != null)
-    )
-    .slice(0, 50);
+  const all = (data?.earningsCalendar || []).filter(
+    (e: any) => e.symbol && e.symbol.length <= 5
+  );
 
-  return NextResponse.json(earnings);
+  // Group by date, sort each day by revenue estimate (biggest companies first), take top 10 per day
+  const byDate: Record<string, any[]> = {};
+  for (const e of all) {
+    if (!byDate[e.date]) byDate[e.date] = [];
+    byDate[e.date].push(e);
+  }
+
+  const result: any[] = [];
+  for (const date of Object.keys(byDate).sort()) {
+    const dayEvents = byDate[date]
+      .sort((a: any, b: any) => (b.revenueEstimate || 0) - (a.revenueEstimate || 0))
+      .slice(0, 10);
+    result.push(...dayEvents);
+  }
+
+  return NextResponse.json(result);
 }
