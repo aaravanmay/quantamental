@@ -33,6 +33,19 @@ export default function StockDetailPage({
   const [alertPrice, setAlertPrice] = useState("");
   const [showAlertForm, setShowAlertForm] = useState(false);
 
+  // Dismiss alert popover on click outside
+  useEffect(() => {
+    if (!showAlertForm) return;
+    function handleClick(e: MouseEvent) {
+      const target = e.target as HTMLElement;
+      if (!target.closest("[data-alert-popover]")) {
+        setShowAlertForm(false);
+      }
+    }
+    document.addEventListener("click", handleClick);
+    return () => document.removeEventListener("click", handleClick);
+  }, [showAlertForm]);
+
   // Check if in watchlist
   useEffect(() => {
     fetch("/api/watchlist")
@@ -220,9 +233,9 @@ export default function StockDetailPage({
                 </button>
 
                 {/* Price Alert Bell */}
-                <div className="relative">
+                <div className="relative" data-alert-popover>
                   <button
-                    onClick={() => setShowAlertForm(!showAlertForm)}
+                    onClick={(e) => { e.stopPropagation(); setShowAlertForm(!showAlertForm); }}
                     className="flex items-center justify-center w-9 h-9 rounded-lg transition-all hover:scale-[1.05]"
                     style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}
                     title="Set price alert"

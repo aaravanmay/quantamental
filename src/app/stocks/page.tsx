@@ -304,7 +304,6 @@ export default function StocksPage() {
                           pnlColor(q.change)
                         )}
                       >
-                        {q.change >= 0 ? "+" : ""}
                         {formatPct(q.change_pct)}
                       </span>
                     )}

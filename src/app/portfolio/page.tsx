@@ -64,8 +64,29 @@ export default function PortfolioPage() {
     loadHoldings();
   }, []);
 
+  // Fetch live prices for holdings
+  const [holdingPrices, setHoldingPrices] = useState<Record<string, number>>({});
+  useEffect(() => {
+    if (holdings.length === 0) return;
+    async function fetchPrices() {
+      const prices: Record<string, number> = {};
+      const tickers = [...new Set(holdings.map((h) => h.ticker))];
+      for (const ticker of tickers) {
+        try {
+          const res = await fetch(`/api/stock/${ticker}/quote`);
+          if (res.ok) {
+            const q = await res.json();
+            if (q.price) prices[ticker] = q.price;
+          }
+        } catch {}
+      }
+      setHoldingPrices(prices);
+    }
+    fetchPrices();
+  }, [holdings]);
+
   const totalValue = holdings.reduce(
-    (sum, h) => sum + (h.current_price || h.avg_cost) * h.shares,
+    (sum, h) => sum + (holdingPrices[h.ticker] || h.avg_cost) * h.shares,
     0
   );
   const totalCost = holdings.reduce(
@@ -624,7 +645,7 @@ export default function PortfolioPage() {
                     </tr>
                   ) : (
                     holdings.map((h) => {
-                      const current = h.current_price || h.avg_cost;
+                      const current = holdingPrices[h.ticker] || h.current_price || h.avg_cost;
                       const pnl =
                         ((current - h.avg_cost) / h.avg_cost) * 100;
                       const weight =

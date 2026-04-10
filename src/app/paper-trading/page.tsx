@@ -139,6 +139,29 @@ export default function PaperTradingPage() {
   const openTrades = trades.filter((t) => t.status === "open");
   const closedTrades = trades.filter((t) => t.status === "closed");
 
+  // Fetch live prices for open positions
+  const [livePrices, setLivePrices] = useState<Record<string, number>>({});
+  useEffect(() => {
+    if (openTrades.length === 0) return;
+    async function fetchPrices() {
+      const prices: Record<string, number> = {};
+      const tickers = [...new Set(openTrades.map((t) => t.ticker))];
+      for (const ticker of tickers) {
+        try {
+          const res = await fetch(`/api/stock/${ticker}/quote`);
+          if (res.ok) {
+            const q = await res.json();
+            if (q.price) prices[ticker] = q.price;
+          }
+        } catch {}
+      }
+      setLivePrices(prices);
+    }
+    fetchPrices();
+    const interval = setInterval(fetchPrices, 30_000);
+    return () => clearInterval(interval);
+  }, [openTrades.length]);
+
   // Calculate available cash
   const totalInvested = openTrades.reduce((sum, t) => sum + t.entry_price * t.shares, 0);
   const availableCash = startingBalance - totalInvested;
@@ -524,14 +547,24 @@ export default function PaperTradingPage() {
                         <td className="text-right font-mono tabular-nums">
                           {formatCurrency(t.entry_price)}
                         </td>
-                        <td className="text-right font-mono tabular-nums">{"\u2014"}</td>
+                        <td className="text-right font-mono tabular-nums">
+                          {livePrices[t.ticker] ? formatCurrency(livePrices[t.ticker]) : "\u2014"}
+                        </td>
                         <td
                           className={cn(
                             "text-right font-mono tabular-nums",
-                            pnlColor(t.pnl_pct || 0)
+                            livePrices[t.ticker]
+                              ? pnlColor(t.direction === "LONG"
+                                  ? ((livePrices[t.ticker] - t.entry_price) / t.entry_price) * 100
+                                  : ((t.entry_price - livePrices[t.ticker]) / t.entry_price) * 100)
+                              : ""
                           )}
                         >
-                          {t.pnl_pct != null ? formatPct(t.pnl_pct) : "\u2014"}
+                          {livePrices[t.ticker]
+                            ? formatPct(t.direction === "LONG"
+                                ? ((livePrices[t.ticker] - t.entry_price) / t.entry_price) * 100
+                                : ((t.entry_price - livePrices[t.ticker]) / t.entry_price) * 100)
+                            : "\u2014"}
                         </td>
                         <td className="text-right font-mono tabular-nums text-[#868F97]">
                           {t.entry_date}
@@ -545,7 +578,7 @@ export default function PaperTradingPage() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              const price = t.entry_price; // Use entry price as fallback
+                              const price = livePrices[t.ticker] || t.entry_price;
                               handleCloseTrade(t.id, price);
                             }}
                             className="rounded bg-[rgba(248,113,113,0.12)] px-2.5 py-1 text-[11px] font-medium text-loss hover:bg-[rgba(248,113,113,0.2)] transition-colors"
