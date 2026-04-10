@@ -44,7 +44,6 @@ export default function PortfolioPage() {
   const [newTicker, setNewTicker] = useState("");
   const [newShares, setNewShares] = useState("");
   const [newCost, setNewCost] = useState("");
-  const [newSector, setNewSector] = useState("");
 
   useEffect(() => {
     async function loadHoldings() {
@@ -75,16 +74,33 @@ export default function PortfolioPage() {
   const totalPnl =
     totalCost > 0 ? ((totalValue - totalCost) / totalCost) * 100 : 0;
 
-  function addHolding() {
+  const [adding, setAdding] = useState(false);
+  const [pasteMode, setPasteMode] = useState(false);
+  const [pasteText, setPasteText] = useState("");
+
+  async function addHolding() {
     if (!newTicker || !newShares || !newCost) return;
+    setAdding(true);
+
+    const ticker = newTicker.toUpperCase();
+
+    // Auto-fetch sector from FMP
+    let sector = "";
+    try {
+      const res = await fetch(`/api/stock/${ticker}/quote`);
+      if (res.ok) {
+        const q = await res.json();
+        sector = q.sector || "";
+      }
+    } catch {}
 
     const holding: Holding = {
       id: crypto.randomUUID(),
-      user_id: "",
-      ticker: newTicker.toUpperCase(),
+      user_id: "default",
+      ticker,
       shares: parseFloat(newShares),
       avg_cost: parseFloat(newCost),
-      sector: newSector,
+      sector,
       added_date: new Date().toISOString().split("T")[0],
     };
 
@@ -92,8 +108,8 @@ export default function PortfolioPage() {
     setNewTicker("");
     setNewShares("");
     setNewCost("");
-    setNewSector("");
     setShowAddForm(false);
+    setAdding(false);
 
     // Persist to Supabase
     try {
@@ -108,6 +124,79 @@ export default function PortfolioPage() {
         }).then(() => {});
       });
     } catch {}
+  }
+
+  async function importFromPaste() {
+    if (!pasteText.trim()) return;
+    setAdding(true);
+
+    // Parse pasted text — supports formats like:
+    // AAPL 100 150.00
+    // AAPL, 100, 150.00
+    // AAPL  100 shares @ $150.00
+    const lines = pasteText.trim().split("\n").filter((l) => l.trim());
+    const parsed: { ticker: string; shares: number; cost: number }[] = [];
+
+    for (const line of lines) {
+      // Extract ticker (first word of caps letters)
+      const tickerMatch = line.match(/\b([A-Z]{1,5})\b/);
+      if (!tickerMatch) continue;
+
+      // Extract numbers
+      const numbers = line.match(/[\d,]+\.?\d*/g);
+      if (!numbers || numbers.length < 1) continue;
+
+      const nums = numbers.map((n) => parseFloat(n.replace(/,/g, ""))).filter((n) => !isNaN(n) && n > 0);
+      if (nums.length < 2) continue;
+
+      parsed.push({
+        ticker: tickerMatch[1],
+        shares: nums[0],
+        cost: nums[1],
+      });
+    }
+
+    // Add all parsed holdings
+    for (const p of parsed) {
+      let sector = "";
+      try {
+        const res = await fetch(`/api/stock/${p.ticker}/quote`);
+        if (res.ok) {
+          const q = await res.json();
+          sector = q.sector || "";
+        }
+      } catch {}
+
+      const holding: Holding = {
+        id: crypto.randomUUID(),
+        user_id: "default",
+        ticker: p.ticker,
+        shares: p.shares,
+        avg_cost: p.cost,
+        sector,
+        added_date: new Date().toISOString().split("T")[0],
+      };
+
+      setHoldings((prev) => [...prev, holding]);
+
+      try {
+        import("@/lib/supabase").then(({ getSupabase }) => {
+          const supabase = getSupabase();
+          supabase.from("portfolio_holdings").insert({
+            user_id: "default",
+            ticker: holding.ticker,
+            shares: holding.shares,
+            avg_cost: holding.avg_cost,
+            sector: holding.sector,
+          }).then(() => {});
+        });
+      } catch {}
+    }
+
+    setPasteText("");
+    setPasteMode(false);
+    setShowAddForm(false);
+    setAdding(false);
   }
 
   async function handleScan() {
@@ -200,67 +289,111 @@ export default function PortfolioPage() {
             {/* Add Holding Form — glass card */}
             {showAddForm && (
               <div className="glass mb-6 p-5" style={dramaticShadow}>
-                <h3 className="mb-4 text-sm font-medium text-white">
-                  Add New Holding
-                </h3>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <div>
-                    <label className="mb-1.5 block text-[11px] uppercase tracking-wider text-[#555]">
-                      Ticker
-                    </label>
-                    <input
-                      value={newTicker}
-                      onChange={(e) => setNewTicker(e.target.value)}
-                      placeholder="AAPL"
-                      className="glass-input w-full px-3 py-2 text-sm text-white placeholder:text-[#555]"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1.5 block text-[11px] uppercase tracking-wider text-[#555]">
-                      Shares
-                    </label>
-                    <input
-                      value={newShares}
-                      onChange={(e) => setNewShares(e.target.value)}
-                      placeholder="100"
-                      type="number"
-                      className="glass-input w-full px-3 py-2 text-sm text-white placeholder:text-[#555]"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1.5 block text-[11px] uppercase tracking-wider text-[#555]">
-                      Avg Cost
-                    </label>
-                    <input
-                      value={newCost}
-                      onChange={(e) => setNewCost(e.target.value)}
-                      placeholder="150.00"
-                      type="number"
-                      step="0.01"
-                      className="glass-input w-full px-3 py-2 text-sm text-white placeholder:text-[#555]"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1.5 block text-[11px] uppercase tracking-wider text-[#555]">
-                      Sector
-                    </label>
-                    <input
-                      value={newSector}
-                      onChange={(e) => setNewSector(e.target.value)}
-                      placeholder="Technology"
-                      className="glass-input w-full px-3 py-2 text-sm text-white placeholder:text-[#555]"
-                    />
-                  </div>
-                </div>
-                <div className="mt-4 flex justify-end">
+                {/* Toggle between manual and paste import */}
+                <div className="flex items-center gap-3 mb-4">
                   <button
-                    onClick={addHolding}
-                    className="rounded-lg bg-[rgba(71,159,250,0.12)] px-5 py-2 text-[13px] font-medium text-accent hover:bg-[rgba(71,159,250,0.2)] transition-colors"
-                    style={{ border: "1px solid rgba(71,159,250,0.2)" }}
+                    onClick={() => setPasteMode(false)}
+                    className={`text-[12px] font-medium px-3 py-1 rounded-md transition-all ${
+                      !pasteMode ? "bg-[rgba(71,159,250,0.15)] text-accent border border-[rgba(71,159,250,0.25)]" : "text-[#868F97]"
+                    }`}
                   >
-                    Add to Portfolio
+                    Add Manually
+                  </button>
+                  <button
+                    onClick={() => setPasteMode(true)}
+                    className={`text-[12px] font-medium px-3 py-1 rounded-md transition-all ${
+                      pasteMode ? "bg-[rgba(71,159,250,0.15)] text-accent border border-[rgba(71,159,250,0.25)]" : "text-[#868F97]"
+                    }`}
+                  >
+                    Paste / Import
                   </button>
                 </div>
+
+                {!pasteMode ? (
+                  <>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <label className="mb-1.5 block text-[11px] uppercase tracking-wider text-[#555]">
+                          Ticker
+                        </label>
+                        <input
+                          value={newTicker}
+                          onChange={(e) => setNewTicker(e.target.value.toUpperCase())}
+                          placeholder="AAPL"
+                          className="glass-input w-full px-3 py-2 text-sm font-mono text-white placeholder:text-[#555]"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-[11px] uppercase tracking-wider text-[#555]">
+                          Shares
+                        </label>
+                        <input
+                          value={newShares}
+                          onChange={(e) => setNewShares(e.target.value)}
+                          placeholder="100"
+                          type="number"
+                          className="glass-input w-full px-3 py-2 text-sm font-mono text-white placeholder:text-[#555]"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-[11px] uppercase tracking-wider text-[#555]">
+                          Avg Cost
+                        </label>
+                        <input
+                          value={newCost}
+                          onChange={(e) => setNewCost(e.target.value)}
+                          placeholder="150.00"
+                          type="number"
+                          step="0.01"
+                          className="glass-input w-full px-3 py-2 text-sm font-mono text-white placeholder:text-[#555]"
+                        />
+                      </div>
+                    </div>
+                    <p className="mt-2 text-[10px] text-[#555]">Sector is auto-detected from the ticker.</p>
+                    <div className="mt-3 flex justify-end">
+                      <button
+                        onClick={addHolding}
+                        disabled={adding || !newTicker || !newShares || !newCost}
+                        className="rounded-lg bg-[rgba(71,159,250,0.12)] px-5 py-2 text-[13px] font-medium text-accent hover:bg-[rgba(71,159,250,0.2)] transition-colors disabled:opacity-40"
+                        style={{ border: "1px solid rgba(71,159,250,0.2)" }}
+                      >
+                        {adding ? "Adding..." : "Add to Portfolio"}
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-[12px] text-[#868F97] mb-3">
+                      Paste your holdings below — one per line. Supports formats like:
+                    </p>
+                    <div className="glass rounded-lg p-3 mb-3 text-[11px] font-mono text-[#555] space-y-0.5">
+                      <div>AAPL 100 150.00</div>
+                      <div>MSFT 50 380.25</div>
+                      <div>NVDA 25 850.00</div>
+                    </div>
+                    <textarea
+                      value={pasteText}
+                      onChange={(e) => setPasteText(e.target.value)}
+                      placeholder="Paste your holdings here — TICKER SHARES COST per line..."
+                      rows={6}
+                      className="glass-input w-full px-3 py-2 text-sm font-mono text-white placeholder:text-[#555] resize-none"
+                      style={{ borderRadius: "12px" }}
+                    />
+                    <div className="mt-3 flex items-center justify-between">
+                      <p className="text-[10px] text-[#555]">
+                        {pasteText.trim().split("\n").filter((l) => l.trim()).length} lines detected
+                      </p>
+                      <button
+                        onClick={importFromPaste}
+                        disabled={adding || !pasteText.trim()}
+                        className="rounded-lg bg-[rgba(71,159,250,0.12)] px-5 py-2 text-[13px] font-medium text-accent hover:bg-[rgba(71,159,250,0.2)] transition-colors disabled:opacity-40"
+                        style={{ border: "1px solid rgba(71,159,250,0.2)" }}
+                      >
+                        {adding ? "Importing..." : "Import All"}
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             )}
 
