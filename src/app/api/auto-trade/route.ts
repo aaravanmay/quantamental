@@ -49,7 +49,12 @@ async function fetchPrice(ticker: string): Promise<number | null> {
   }
 }
 
-// ── POST /api/auto-trade ────────────────────────────────────────────────────
+// ── POST/GET /api/auto-trade ───────────────────────────────────────────────
+// GET is for Vercel Cron, POST is for manual triggers from the dashboard
+
+export async function GET(req: NextRequest) {
+  return POST(req);
+}
 
 export async function POST(_req: NextRequest) {
   const supabase = getOptionalSupabase();

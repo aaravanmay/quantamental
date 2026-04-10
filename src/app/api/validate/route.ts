@@ -124,13 +124,24 @@ export async function POST(req: NextRequest) {
     if (newsNegative > newsPositive) issues.push(`Negative news sentiment (${newsNegative} bearish headlines)`);
 
     // ── Make recommendation ──
-    const score = strengths.length - issues.length;
-    const recommendation = score >= 2 ? "GO" : "NO-GO";
-    const confidence = Math.abs(score) >= 3 ? "HIGH" : Math.abs(score) >= 1 ? "MEDIUM" : "LOW";
+    // If a signal was passed in (from backtesting) with a good Sharpe, lean GO
+    const sharpeBoost = signal?.sharpe ? Math.min(signal.sharpe / 2, 2) : 0;
+
+    // Critical issues = real red flags (not just "valuation high")
+    const criticalIssues = issues.filter(i =>
+      i.includes("Negative net margin") ||
+      i.includes("Negative momentum") ||
+      i.includes("Negative news sentiment") ||
+      i.includes("Weak liquidity")
+    );
+
+    const score = strengths.length - criticalIssues.length + sharpeBoost;
+    const recommendation = score >= 1 ? "GO" : "NO-GO";
+    const confidence = score >= 3 ? "HIGH" : score >= 1.5 ? "MEDIUM" : "LOW";
 
     const thesis = recommendation === "GO"
-      ? `${t} shows ${strengths.length} fundamental strengths: ${strengths.slice(0, 3).join(", ")}. ${issues.length > 0 ? `Watch for: ${issues[0]}.` : "No significant red flags detected."}`
-      : `${t} has ${issues.length} concerns: ${issues.slice(0, 3).join(", ")}. ${strengths.length > 0 ? `Positives include: ${strengths[0]}.` : ""} Recommend waiting for better entry.`;
+      ? `${t} shows ${strengths.length} positives: ${strengths.slice(0, 3).join(", ")}.${criticalIssues.length > 0 ? ` Watch for: ${criticalIssues[0]}.` : " No critical red flags detected."}${signal?.sharpe ? ` Backtested Sharpe of ${signal.sharpe} supports the trade.` : ""}`
+      : `${t} has ${criticalIssues.length} critical concerns: ${criticalIssues.slice(0, 3).join(", ")}. ${strengths.length > 0 ? `Positives include: ${strengths[0]}.` : ""} Recommend waiting.`;
 
     const risk = issues.length > 0
       ? issues.join(". ") + "."
