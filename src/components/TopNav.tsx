@@ -6,7 +6,8 @@ import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 
 const NAV = [
-  { href: "/", label: "Screener" },
+  { href: "/", label: "Home" },
+  { href: "/stock-finder", label: "Signals" },
   { href: "/stocks", label: "Stocks" },
   { href: "/watchlist", label: "Watchlist" },
   { href: "/earnings", label: "Earnings" },

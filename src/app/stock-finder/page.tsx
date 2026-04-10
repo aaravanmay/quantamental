@@ -42,9 +42,25 @@ export default function StockFinderPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // TODO: Fetch from Supabase
-    setSignals(SAMPLE_SIGNALS);
-    setLoading(false);
+    async function loadSignals() {
+      try {
+        const res = await fetch("/api/signals?limit=200");
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            setSignals(data);
+          } else {
+            setSignals(SAMPLE_SIGNALS);
+          }
+        } else {
+          setSignals(SAMPLE_SIGNALS);
+        }
+      } catch {
+        setSignals(SAMPLE_SIGNALS);
+      }
+      setLoading(false);
+    }
+    loadSignals();
   }, []);
 
   async function handleValidate(signal: TradeSignal) {
