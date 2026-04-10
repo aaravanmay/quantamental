@@ -4,6 +4,7 @@ import "./globals.css";
 import { TopNav } from "@/components/TopNav";
 import { SettingsProvider } from "@/lib/settings-context";
 import { KeyboardShortcuts } from "@/components/KeyboardShortcuts";
+import { ToastProvider } from "@/components/Toast";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
 const jetbrains = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrains", display: "swap" });
@@ -24,12 +25,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="bg-black font-sans text-white antialiased overflow-x-hidden">
         <SettingsProvider>
+          <ToastProvider>
           <KeyboardShortcuts />
           <TopNav />
           <main>{children}</main>
           <footer className="text-center py-6 text-[11px] text-[#555]" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
             Quantamental Architect — Personal Trading System
           </footer>
+        </ToastProvider>
         </SettingsProvider>
       </body>
     </html>

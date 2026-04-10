@@ -6,6 +6,7 @@ import Image from "next/image";
 import { LineChart, ToggleLeft, ToggleRight, Plus, X } from "lucide-react";
 import { cn, formatCurrency, formatPct, pnlColor } from "@/lib/utils";
 import { useSettings, useUpdateSettings } from "@/lib/settings-context";
+import { useToast } from "@/components/Toast";
 import { ScrollReveal } from "@/components/ScrollReveal";
 import { EquityCurve } from "@/components/EquityCurve";
 import type { PaperTrade, PerformanceStats } from "@/lib/types";
@@ -20,6 +21,7 @@ export default function PaperTradingPage() {
   const settings = useSettings();
   const { autoMode, startingBalance, timeframe } = settings;
   const updateSettings = useUpdateSettings();
+  const { showToast } = useToast();
   const mode = autoMode ? "auto" : "manual";
 
   // Equity curve shows flat starting balance when no trades exist — real data comes from Supabase
@@ -50,14 +52,17 @@ export default function PaperTradingPage() {
         body: JSON.stringify({ id: tradeId, exit_price: currentPrice }),
       });
       if (res.ok) {
-        // Refresh trades
+        const result = await res.json();
+        showToast(result.message || "Trade closed");
         const refreshRes = await fetch("/api/paper-trade");
         if (refreshRes.ok) {
           const data = await refreshRes.json();
           setTrades(data.trades || []);
         }
       }
-    } catch {}
+    } catch {
+      showToast("Failed to close trade", "error");
+    }
   }
 
   // New trade form
@@ -79,7 +84,7 @@ export default function PaperTradingPage() {
         price = q.price;
       }
       if (!price) {
-        alert("Could not fetch price for " + newTicker.toUpperCase());
+        showToast("Could not fetch price for " + newTicker.toUpperCase(), "error");
         setPlacing(false);
         return;
       }
@@ -97,6 +102,8 @@ export default function PaperTradingPage() {
       });
 
       if (res.ok) {
+        const result = await res.json();
+        showToast(result.message || `Bought ${newShares} ${newTicker.toUpperCase()}`);
         // Refresh trades
         const refreshRes = await fetch("/api/paper-trade");
         if (refreshRes.ok) {
@@ -106,8 +113,12 @@ export default function PaperTradingPage() {
         setNewTicker("");
         setNewShares("");
         setShowNewTrade(false);
+      } else {
+        showToast("Failed to place trade", "error");
       }
-    } catch {}
+    } catch {
+      showToast("Failed to place trade", "error");
+    }
     setPlacing(false);
   }
 
