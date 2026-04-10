@@ -2,27 +2,48 @@ import { NextRequest, NextResponse } from "next/server";
 
 const FMP_KEY = process.env.FMP_API_KEY || "";
 
+// In-memory cache to avoid burning FMP's 250 calls/day limit
+const cache = new Map<string, { data: any[]; timestamp: number }>();
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours — historical data doesn't change frequently
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ ticker: string }> }
 ) {
   const { ticker } = await params;
+  const t = ticker.toUpperCase();
 
-  // Fetch 1 year of daily OHLCV data from FMP (stable API)
+  // Check in-memory cache first
+  const cached = cache.get(t);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return NextResponse.json(cached.data);
+  }
+
   const res = await fetch(
-    `https://financialmodelingprep.com/stable/historical-price-eod/full?symbol=${ticker.toUpperCase()}&apikey=${FMP_KEY}`,
-    { next: { revalidate: 3600 } }
+    `https://financialmodelingprep.com/stable/historical-price-eod/full?symbol=${t}&apikey=${FMP_KEY}`,
+    { next: { revalidate: 86400 } } // 24 hour Vercel cache too
   );
 
-  if (!res.ok) return NextResponse.json([], { status: 502 });
+  if (!res.ok) {
+    // Return cached data if available even if stale
+    if (cached) return NextResponse.json(cached.data);
+    return NextResponse.json([], { status: 502 });
+  }
+
   const data = await res.json();
 
-  // Stable API returns flat array, not { historical: [...] }
-  const records = Array.isArray(data) ? data : data?.historical || [];
-  if (records.length === 0) return NextResponse.json([]);
+  // Check for rate limit error from FMP
+  if (data?.["Error Message"]?.includes("Limit")) {
+    if (cached) return NextResponse.json(cached.data);
+    return NextResponse.json([], { status: 429 });
+  }
 
-  // Transform to TradingView Lightweight Charts format, take last 365 days
-  // Filter out any records with missing data and deduplicate by date
+  const records = Array.isArray(data) ? data : data?.historical || [];
+  if (records.length === 0) {
+    if (cached) return NextResponse.json(cached.data);
+    return NextResponse.json([]);
+  }
+
   const seen = new Set<string>();
   const candles = records
     .slice(0, 365)
@@ -39,7 +60,10 @@ export async function GET(
       low: d.low ?? Math.min(d.open, d.close),
       close: d.close,
     }))
-    .reverse(); // Oldest first for charts
+    .reverse();
+
+  // Store in cache
+  cache.set(t, { data: candles, timestamp: Date.now() });
 
   return NextResponse.json(candles);
 }

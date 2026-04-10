@@ -66,11 +66,20 @@ export default function EarningsPage() {
 
     <div className="max-w-[1220px] mx-auto px-6 py-8">
       <ScrollReveal>
-        <div className="mb-8">
-          <h1 className="page-heading">Earnings Calendar</h1>
-          <p className="mt-2 text-[14px] text-[var(--text-secondary)]">
-            Upcoming earnings reports for the next 2 weeks.
-          </p>
+        <div className="mb-8 flex items-start justify-between">
+          <div>
+            <h1 className="page-heading">Earnings Calendar</h1>
+            <p className="mt-2 text-[14px] text-[var(--text-secondary)]">
+              Upcoming earnings reports for the next 2 weeks.
+            </p>
+          </div>
+          <button
+            onClick={() => document.getElementById("previous-earnings")?.scrollIntoView({ behavior: "smooth" })}
+            className="shrink-0 flex items-center gap-2 rounded-lg px-4 py-2 text-[13px] font-medium text-[var(--text-secondary)] hover:text-white transition-all"
+            style={{ background: "var(--glass)", border: "1px solid var(--border)" }}
+          >
+            Previous Earnings &darr;
+          </button>
         </div>
       </ScrollReveal>
 
@@ -193,7 +202,7 @@ export default function EarningsPage() {
         </div>
       )}
     {/* ═══ PREVIOUS EARNINGS ═══ */}
-    <div className="mt-16">
+    <div className="mt-16" id="previous-earnings">
       <ScrollReveal>
         <div className="flex items-center gap-2 mb-6">
           <TrendingUp size={16} className="text-[var(--orange)]" />

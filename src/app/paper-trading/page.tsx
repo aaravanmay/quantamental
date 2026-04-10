@@ -65,6 +65,17 @@ export default function PaperTradingPage() {
     }
   }
 
+  // Market hours check (NYSE: 9:30 AM - 4:00 PM ET, Mon-Fri)
+  function isMarketOpen(): boolean {
+    const now = new Date();
+    const et = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
+    const day = et.getDay();
+    const hours = et.getHours();
+    const mins = et.getMinutes();
+    const timeInMins = hours * 60 + mins;
+    return day >= 1 && day <= 5 && timeInMins >= 570 && timeInMins < 960; // 9:30-16:00
+  }
+
   // New trade form
   const [showNewTrade, setShowNewTrade] = useState(false);
   const [newTicker, setNewTicker] = useState("");
@@ -103,7 +114,10 @@ export default function PaperTradingPage() {
 
       if (res.ok) {
         const result = await res.json();
-        showToast(result.message || `Bought ${newShares} ${newTicker.toUpperCase()}`);
+        const marketMsg = isMarketOpen()
+          ? result.message || `Bought ${newShares} ${newTicker.toUpperCase()}`
+          : `Order placed for ${newTicker.toUpperCase()} — will execute at market open`;
+        showToast(marketMsg);
         // Refresh trades
         const refreshRes = await fetch("/api/paper-trade");
         if (refreshRes.ok) {
@@ -124,6 +138,10 @@ export default function PaperTradingPage() {
 
   const openTrades = trades.filter((t) => t.status === "open");
   const closedTrades = trades.filter((t) => t.status === "closed");
+
+  // Calculate available cash
+  const totalInvested = openTrades.reduce((sum, t) => sum + t.entry_price * t.shares, 0);
+  const availableCash = startingBalance - totalInvested;
 
   return (
     <div className="relative overflow-hidden">
@@ -339,13 +357,18 @@ export default function PaperTradingPage() {
                           border: "1px solid rgba(71,159,250,0.25)",
                         }}
                       >
-                        {placing ? "Placing..." : "Buy at Market Price"}
+                        {placing ? "Placing..." : isMarketOpen() ? "Buy at Market Price" : "Place Order (Market Closed)"}
                       </button>
                     </div>
                   </div>
-                  <p className="mt-3 text-[11px] text-[#555]">
-                    Price is fetched live from FMP at the moment you click Buy.
-                  </p>
+                  <div className="mt-3 flex items-center justify-between">
+                    <p className="text-[11px] text-[var(--text-muted)]">
+                      {isMarketOpen() ? "Price fetched live at time of purchase." : "Order will execute at next market open price."}
+                    </p>
+                    <p className="text-[11px] font-mono text-[var(--text-secondary)]">
+                      Available: {formatCurrency(availableCash)}
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
@@ -354,7 +377,7 @@ export default function PaperTradingPage() {
 
         {/* Performance Stats */}
         <ScrollReveal delay={100}>
-          <div className="mb-12 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+          <div className="mb-12 grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3">
             <StatCard
               label="Total Return"
               value={stats ? formatPct(stats.total_return_pct) : "\u2014"}
@@ -381,9 +404,14 @@ export default function PaperTradingPage() {
               value={stats ? String(stats.total_trades) : "0"}
             />
             <StatCard
-              label="Open Positions"
+              label="Open"
               value={String(openTrades.length)}
               tint="green"
+            />
+            <StatCard
+              label="Cash"
+              value={formatCurrency(availableCash, true)}
+              tint="blue"
             />
           </div>
         </ScrollReveal>

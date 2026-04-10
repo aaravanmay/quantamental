@@ -13,7 +13,7 @@ import { triggerPortfolioScan } from "@/lib/api";
 import type { Holding, ScanResult } from "@/lib/types";
 
 // Real equity data from Supabase — flat line when no holdings
-const PORTFOLIO_EQUITY_DATA: number[] = [];
+// Portfolio equity is computed from holdings — no static data needed
 
 /* ── Gradient text style reused on headings ── */
 const gradientText = {
@@ -44,6 +44,7 @@ export default function PortfolioPage() {
   const [newTicker, setNewTicker] = useState("");
   const [newShares, setNewShares] = useState("");
   const [newCost, setNewCost] = useState("");
+  const [newDate, setNewDate] = useState(new Date().toISOString().split("T")[0]);
 
   useEffect(() => {
     async function loadHoldings() {
@@ -101,13 +102,14 @@ export default function PortfolioPage() {
       shares: parseFloat(newShares),
       avg_cost: parseFloat(newCost),
       sector,
-      added_date: new Date().toISOString().split("T")[0],
+      added_date: newDate,
     };
 
     setHoldings((prev) => [...prev, holding]);
     setNewTicker("");
     setNewShares("");
     setNewCost("");
+    setNewDate(new Date().toISOString().split("T")[0]);
     setShowAddForm(false);
     setAdding(false);
 
@@ -121,6 +123,7 @@ export default function PortfolioPage() {
           shares: holding.shares,
           avg_cost: holding.avg_cost,
           sector: holding.sector,
+          added_date: holding.added_date,
         }).then(() => {});
       });
     } catch {}
@@ -311,7 +314,7 @@ export default function PortfolioPage() {
 
                 {!pasteMode ? (
                   <>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                       <div>
                         <label className="mb-1.5 block text-[11px] uppercase tracking-wider text-[#555]">
                           Ticker
@@ -346,6 +349,18 @@ export default function PortfolioPage() {
                           type="number"
                           step="0.01"
                           className="glass-input w-full px-3 py-2 text-sm font-mono text-white placeholder:text-[#555]"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-[11px] uppercase tracking-wider text-[#555]">
+                          Purchase Date
+                        </label>
+                        <input
+                          value={newDate}
+                          onChange={(e) => setNewDate(e.target.value)}
+                          type="date"
+                          className="glass-input w-full px-3 py-2 text-sm font-mono text-white"
+                          style={{ colorScheme: "dark" }}
                         />
                       </div>
                     </div>
@@ -540,10 +555,27 @@ export default function PortfolioPage() {
             {/* Equity Curve */}
             <div className="glass rounded-2xl p-5" style={dramaticShadow}>
               <EquityCurve
-                data={PORTFOLIO_EQUITY_DATA.length > 0 ? PORTFOLIO_EQUITY_DATA : [100000]}
+                data={(() => {
+                  if (holdings.length === 0) return [0];
+                  // Build a simple equity curve: each holding adds its cost basis at its purchase date
+                  // Sort holdings by date, then accumulate
+                  const sorted = [...holdings]
+                    .filter((h) => h.added_date)
+                    .sort((a, b) => (a.added_date || "").localeCompare(b.added_date || ""));
+                  if (sorted.length === 0) return [totalCost, totalValue];
+                  const curve = [0];
+                  let running = 0;
+                  sorted.forEach((h) => {
+                    running += h.shares * h.avg_cost;
+                    curve.push(running);
+                  });
+                  // Add current value as final point
+                  curve.push(totalValue || running);
+                  return curve;
+                })()}
                 height={160}
                 color="#4EBE96"
-                label={holdings.length > 0 ? "Portfolio Performance" : "Add holdings to track performance"}
+                label={holdings.length > 0 ? "Portfolio Value Over Time" : "Add holdings to track performance"}
               />
             </div>
           </div>
