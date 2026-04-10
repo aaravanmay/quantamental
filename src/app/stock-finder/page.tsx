@@ -173,7 +173,7 @@ export default function StockFinderPage() {
 
         {/* Filters */}
         <ScrollReveal delay={100}>
-          <div className="mb-8 grid grid-cols-3 gap-3">
+          <div className="mb-8 grid grid-cols-1 sm:grid-cols-3 gap-3">
             {/* Sector */}
             <div className="glass rounded-xl p-3">
               <div className="text-[10px] uppercase tracking-wider text-[#555] mb-2">Sector</div>

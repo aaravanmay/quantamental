@@ -93,7 +93,7 @@ export default function HomePage() {
             </p>
           </ScrollReveal>
           <ScrollReveal delay={100}>
-            <h1 className="page-heading text-[56px] mb-5">
+            <h1 className="page-heading text-[32px] sm:text-[44px] md:text-[56px] mb-5">
               Make better trades.
             </h1>
           </ScrollReveal>
@@ -110,7 +110,7 @@ export default function HomePage() {
 
           {/* Signals Table */}
           <ScrollReveal delay={400}>
-            <div style={{ perspective: "1200px" }}>
+            <div className="hidden sm:block" style={{ perspective: "1200px" }}>
               <div style={{
                 transform: "rotateX(10deg) rotateY(-2deg)",
                 transition: "transform 0.5s ease",
@@ -151,6 +151,42 @@ export default function HomePage() {
                             s.status === "nogo" && "badge-loss",
                             s.status === "pending" && "bg-[var(--glass-hover)] text-[var(--text-secondary)]"
                           )}>{s.status === "go" ? "GO" : s.status === "nogo" ? "NO-GO" : "Pending"}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </ScrollReveal>
+
+          {/* Mobile: Card view instead of tilted table */}
+          <ScrollReveal delay={400}>
+            <div className="sm:hidden overflow-x-auto -mx-6 px-6">
+              <div className="glass rounded-xl overflow-hidden card-shadow">
+                <table className="stock-table">
+                  <thead>
+                    <tr>
+                      <th>Ticker</th>
+                      <th className="text-right">Price</th>
+                      <th className="text-right">Change</th>
+                      <th className="text-center">Signal</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {SAMPLE.slice(0, 5).map((s) => (
+                      <tr key={s.id} onClick={() => router.push(`/stock/${s.ticker}`)}>
+                        <td className="font-semibold">{s.ticker}</td>
+                        <td className="text-right font-mono tabular-nums">{s.price ? `$${s.price.toFixed(0)}` : "—"}</td>
+                        <td className={cn("text-right font-mono tabular-nums", pnlColor(s.change))}>
+                          {s.change ? formatPct(s.change) : "—"}
+                        </td>
+                        <td className="text-center">
+                          <span className={cn("inline-block rounded-full px-2 py-0.5 text-[10px] font-medium",
+                            s.status === "go" && "badge-gain",
+                            s.status === "nogo" && "badge-loss",
+                            s.status === "pending" && "bg-[var(--glass-hover)] text-[var(--text-secondary)]"
+                          )}>{s.status === "go" ? "GO" : s.status === "nogo" ? "NO-GO" : "..."}</span>
                         </td>
                       </tr>
                     ))}
@@ -439,7 +475,7 @@ export default function HomePage() {
 
         <div className="max-w-[1220px] mx-auto px-6 relative z-10">
           <ScrollReveal>
-            <h2 className="page-heading text-[44px] mb-4">
+            <h2 className="page-heading text-[28px] sm:text-[36px] md:text-[44px] mb-4">
               Your edge, automated.
             </h2>
           </ScrollReveal>

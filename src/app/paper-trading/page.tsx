@@ -271,7 +271,7 @@ export default function PaperTradingPage() {
                       <X size={16} />
                     </button>
                   </div>
-                  <div className="grid grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div>
                       <label className="text-[11px] uppercase tracking-wider text-[#555] mb-1 block">Ticker</label>
                       <input
@@ -343,7 +343,7 @@ export default function PaperTradingPage() {
 
         {/* Performance Stats */}
         <ScrollReveal delay={100}>
-          <div className="mb-12 grid grid-cols-6 gap-3">
+          <div className="mb-12 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
             <StatCard
               label="Total Return"
               value={stats ? formatPct(stats.total_return_pct) : "\u2014"}

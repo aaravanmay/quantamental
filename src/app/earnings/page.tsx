@@ -77,7 +77,7 @@ export default function EarningsPage() {
       {/* Stats */}
       {!loading && earnings.length > 0 && (
         <ScrollReveal delay={50}>
-          <div className="mb-8 grid grid-cols-4 gap-3">
+          <div className="mb-8 grid grid-cols-2 md:grid-cols-4 gap-3">
             <div className="glass rounded-xl p-4 card-shadow">
               <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Total Reports</div>
               <div className="text-[24px] font-mono font-semibold text-white">{earnings.length}</div>

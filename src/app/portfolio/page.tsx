@@ -311,7 +311,7 @@ export default function PortfolioPage() {
 
                 {!pasteMode ? (
                   <>
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div>
                         <label className="mb-1.5 block text-[11px] uppercase tracking-wider text-[#555]">
                           Ticker
