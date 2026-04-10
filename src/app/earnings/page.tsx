@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Calendar, Loader2 } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+import { Calendar, Loader2, TrendingUp, TrendingDown, CheckCircle, XCircle } from "lucide-react";
+import { formatCurrency, formatPct, pnlColor } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { ScrollReveal } from "@/components/ScrollReveal";
 
@@ -21,7 +21,9 @@ interface EarningsEvent {
 
 export default function EarningsPage() {
   const [earnings, setEarnings] = useState<EarningsEvent[]>([]);
+  const [pastEarnings, setPastEarnings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingPast, setLoadingPast] = useState(true);
 
   useEffect(() => {
     async function load() {
@@ -34,7 +36,18 @@ export default function EarningsPage() {
       } catch {}
       setLoading(false);
     }
+    async function loadPast() {
+      try {
+        const res = await fetch("/api/earnings/past");
+        if (res.ok) {
+          const data = await res.json();
+          setPastEarnings(data);
+        }
+      } catch {}
+      setLoadingPast(false);
+    }
     load();
+    loadPast();
   }, []);
 
   // Group by date
@@ -179,6 +192,128 @@ export default function EarningsPage() {
           })}
         </div>
       )}
+    {/* ═══ PREVIOUS EARNINGS ═══ */}
+    <div className="mt-16">
+      <ScrollReveal>
+        <div className="flex items-center gap-2 mb-6">
+          <TrendingUp size={16} className="text-[var(--orange)]" />
+          <h2 className="section-heading">Previous Earnings</h2>
+          <span className="text-[11px] text-[var(--text-muted)]">Past 30 days</span>
+        </div>
+      </ScrollReveal>
+
+      {loadingPast ? (
+        <div className="py-12 text-center">
+          <Loader2 size={20} className="mx-auto animate-spin text-[var(--text-muted)]" />
+        </div>
+      ) : pastEarnings.length === 0 ? (
+        <div className="py-12 text-center text-[13px] text-[var(--text-secondary)]">
+          No recent earnings results available.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {pastEarnings.map((e: any, idx: number) => (
+            <ScrollReveal key={e.symbol + e.date} delay={idx * 40}>
+              <Link
+                href={`/stock/${e.symbol}`}
+                className="block glass rounded-xl p-5 hover:bg-[var(--glass-hover)] transition-all card-shadow group"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-[16px] font-semibold text-white group-hover:text-[var(--accent)] transition-colors">
+                      {e.symbol}
+                    </span>
+                    <span className="text-[12px] text-[var(--text-secondary)]">
+                      {new Date(e.date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      {" · "}Q{e.quarter} {e.year}
+                    </span>
+                  </div>
+                  {/* Stock price reaction */}
+                  {e.priceChange != null && (
+                    <div className={cn(
+                      "flex items-center gap-1 rounded-lg px-2.5 py-1 text-[12px] font-mono font-medium",
+                      e.priceChange >= 0 ? "bg-[rgba(78,190,150,0.1)] text-[var(--gain)]" : "bg-[rgba(248,113,113,0.1)] text-[var(--loss)]"
+                    )}>
+                      {e.priceChange >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                      {e.priceChange >= 0 ? "+" : ""}{e.priceChange.toFixed(2)}% on earnings day
+                    </div>
+                  )}
+                </div>
+
+                {/* EPS + Revenue results */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                  <div className="glass rounded-lg px-3 py-2">
+                    <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-0.5">EPS Actual</div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[14px] font-mono font-semibold text-white">
+                        ${e.epsActual?.toFixed(2)}
+                      </span>
+                      {e.epsBeat != null && (
+                        e.epsBeat
+                          ? <CheckCircle size={12} className="text-[var(--gain)]" />
+                          : <XCircle size={12} className="text-[var(--loss)]" />
+                      )}
+                    </div>
+                    <div className="text-[10px] text-[var(--text-muted)]">
+                      Est. ${e.epsEstimate?.toFixed(2)}
+                      {e.epsSurprise != null && (
+                        <span className={e.epsSurprise >= 0 ? "text-[var(--gain)]" : "text-[var(--loss)]"}>
+                          {" "}{e.epsSurprise >= 0 ? "+" : ""}{e.epsSurprise.toFixed(1)}%
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="glass rounded-lg px-3 py-2">
+                    <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-0.5">Revenue</div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[14px] font-mono font-semibold text-white">
+                        {e.revenueActual ? formatCurrency(e.revenueActual, true) : "—"}
+                      </span>
+                      {e.revBeat != null && (
+                        e.revBeat
+                          ? <CheckCircle size={12} className="text-[var(--gain)]" />
+                          : <XCircle size={12} className="text-[var(--loss)]" />
+                      )}
+                    </div>
+                    <div className="text-[10px] text-[var(--text-muted)]">
+                      Est. {formatCurrency(e.revenueEstimate, true)}
+                    </div>
+                  </div>
+                  <div className="glass rounded-lg px-3 py-2">
+                    <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-0.5">Result</div>
+                    <span className={cn(
+                      "inline-block rounded-full px-2 py-0.5 text-[11px] font-medium",
+                      e.epsBeat && e.revBeat ? "badge-gain" : !e.epsBeat && !e.revBeat ? "badge-loss" : "bg-[rgba(255,191,0,0.1)] text-[#ffbf00]"
+                    )}>
+                      {e.epsBeat && e.revBeat ? "Double Beat" : !e.epsBeat && !e.revBeat ? "Double Miss" : e.epsBeat ? "EPS Beat" : "Rev Beat"}
+                    </span>
+                  </div>
+                  <div className="glass rounded-lg px-3 py-2">
+                    <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-0.5">Stock Move</div>
+                    <span className={cn(
+                      "text-[14px] font-mono font-semibold",
+                      e.priceChange != null ? pnlColor(e.priceChange) : "text-[var(--text-muted)]"
+                    )}>
+                      {e.priceChange != null ? `${e.priceChange >= 0 ? "+" : ""}${e.priceChange.toFixed(2)}%` : "—"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* News headline explaining the move */}
+                {e.newsHeadline && (
+                  <div className="rounded-lg px-3 py-2 bg-[rgba(255,255,255,0.02)] border border-[var(--border)]">
+                    <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">Why it moved</div>
+                    <p className="text-[12px] text-[var(--text-secondary)] leading-relaxed">
+                      {e.newsHeadline}
+                    </p>
+                  </div>
+                )}
+              </Link>
+            </ScrollReveal>
+          ))}
+        </div>
+      )}
+    </div>
     </div>
     </div>
   );
