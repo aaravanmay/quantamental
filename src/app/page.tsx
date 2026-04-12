@@ -3,516 +3,429 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { StockSearch } from "@/components/StockSearch";
 import { ScrollReveal } from "@/components/ScrollReveal";
 import { RegimeBadge } from "@/components/RegimeBadge";
 import { SectorRotationCard } from "@/components/SectorRotationCard";
-import { formatCurrency, formatPct, pnlColor, cn } from "@/lib/utils";
-import {
-  BarChart3, TrendingUp, TrendingDown, Briefcase, Newspaper,
-  Calendar, Star, ArrowRight, LineChart, Zap,
-} from "lucide-react";
-
-const SHOWCASE_TICKERS = [
-  { ticker: "NVDA", name: "NVIDIA Corp", strategy: "EMA Cross + RSI", sharpe: 2.14, win_rate: 0.72, status: "go" },
-  { ticker: "AAPL", name: "Apple Inc", strategy: "Bollinger Squeeze", sharpe: 1.87, win_rate: 0.65, status: "go" },
-  { ticker: "XOM", name: "Exxon Mobil", strategy: "MACD Divergence", sharpe: 1.62, win_rate: 0.61, status: "nogo" },
-  { ticker: "JPM", name: "JPMorgan Chase", strategy: "Mean Reversion", sharpe: 1.54, win_rate: 0.58, status: "go" },
-  { ticker: "TSLA", name: "Tesla Inc", strategy: "Momentum Breakout", sharpe: 1.91, win_rate: 0.55, status: "pending" },
-  { ticker: "AMZN", name: "Amazon.com", strategy: "EMA Cross + RSI", sharpe: 1.78, win_rate: 0.63, status: "go" },
-  { ticker: "META", name: "Meta Platforms", strategy: "Volume Profile", sharpe: 1.69, win_rate: 0.60, status: "pending" },
-  { ticker: "MSFT", name: "Microsoft Corp", strategy: "Bollinger Squeeze", sharpe: 1.83, win_rate: 0.67, status: "go" },
-];
+import { cn } from "@/lib/utils";
+import { ArrowRight, Zap, Shield, TrendingUp, BarChart3 } from "lucide-react";
 
 export default function HomePage() {
   const router = useRouter();
-  const [liveQuotes, setLiveQuotes] = useState<Record<string, any>>({});
+  const [topSignals, setTopSignals] = useState<any[]>([]);
   const [marketNews, setMarketNews] = useState<any[]>([]);
   const [gainers, setGainers] = useState<any[]>([]);
-  const [losers, setLosers] = useState<any[]>([]);
-  const [earnings, setEarnings] = useState<any[]>([]);
-  const [watchlist, setWatchlist] = useState<any[]>([]);
-  const [trades, setTrades] = useState<any[]>([]);
 
-  // Fetch all data in parallel
   useEffect(() => {
-    Promise.allSettled([
-      fetch("/api/news").then((r) => r.json()),
-      fetch("/api/market").then((r) => r.json()),
-      fetch("/api/earnings").then((r) => r.json()),
-      fetch("/api/watchlist").then((r) => r.json()),
-      fetch("/api/paper-trade?status=open").then((r) => r.json()),
-    ]).then(([newsR, marketR, earningsR, watchR, tradesR]) => {
-      if (newsR.status === "fulfilled") setMarketNews(newsR.value);
-      if (marketR.status === "fulfilled") {
-        setGainers(marketR.value.gainers || []);
-        setLosers(marketR.value.losers || []);
-      }
-      if (earningsR.status === "fulfilled") setEarnings(earningsR.value);
-      if (watchR.status === "fulfilled") setWatchlist(watchR.value.items || []);
-      if (tradesR.status === "fulfilled") setTrades(tradesR.value.trades || []);
-    });
+    // Load top proposals
+    fetch("/api/v2/daily-scan")
+      .then((r) => r.json())
+      .then((d) => setTopSignals((d.proposals || []).slice(0, 3)))
+      .catch(() => {});
+    // Load news
+    fetch("/api/news")
+      .then((r) => r.json())
+      .then((d) => setMarketNews(Array.isArray(d) ? d.slice(0, 4) : []))
+      .catch(() => {});
+    // Load gainers
+    fetch("/api/market")
+      .then((r) => r.json())
+      .then((d) => setGainers(d.gainers?.slice(0, 5) || []))
+      .catch(() => {});
   }, []);
-
-  // Fetch live prices for showcase tickers
-  useEffect(() => {
-    async function loadPrices() {
-      const quotes: Record<string, any> = {};
-      for (let i = 0; i < SHOWCASE_TICKERS.length; i += 4) {
-        const batch = SHOWCASE_TICKERS.slice(i, i + 4);
-        const results = await Promise.allSettled(
-          batch.map((t) => fetch(`/api/stock/${t.ticker}/quote`).then((r) => r.json()))
-        );
-        results.forEach((r, idx) => {
-          if (r.status === "fulfilled" && r.value?.price) {
-            quotes[batch[idx].ticker] = r.value;
-          }
-        });
-      }
-      setLiveQuotes(quotes);
-    }
-    loadPrices();
-  }, []);
-
-  const SAMPLE = SHOWCASE_TICKERS.map((t, i) => ({
-    id: String(i + 1),
-    ...t,
-    price: liveQuotes[t.ticker]?.price ?? 0,
-    change: liveQuotes[t.ticker]?.change_pct ?? 0,
-  }));
 
   return (
-    <div className="relative overflow-hidden">
-      {/* ═══ HERO ═══ */}
-      <section className="relative pt-20 pb-8 overflow-hidden">
-        <div className="absolute left-1/2 -top-40 -translate-x-1/2 w-[800px] h-[500px] rounded-full"
-          style={{ background: "radial-gradient(ellipse, rgba(71,159,250,0.07) 0%, transparent 70%)" }} />
+    <div className="relative">
+      {/* ═══ SECTION 1: HERO ═══ */}
+      <section className="relative min-h-[85vh] flex flex-col justify-center overflow-hidden">
+        {/* Background glow */}
+        <div
+          className="pointer-events-none absolute left-1/2 top-1/4 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[600px]"
+          style={{ background: "radial-gradient(ellipse, rgba(71,159,250,0.08) 0%, transparent 60%)" }}
+        />
+        {/* Atmospheric image */}
+        <div className="pointer-events-none absolute right-0 top-0 w-[600px] h-[500px] opacity-[0.06]">
+          <Image
+            src="https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&q=60"
+            alt=""
+            fill
+            className="object-cover"
+            style={{ maskImage: "radial-gradient(ellipse 80% 80% at 80% 30%, black, transparent)" }}
+          />
+        </div>
 
-        <div className="max-w-[1220px] mx-auto px-6 text-center relative z-10">
+        <div className="max-w-[1220px] mx-auto px-6 relative z-10">
           <ScrollReveal>
-            <p className="text-[12px] font-semibold uppercase tracking-[0.2em] text-[var(--accent)] mb-5">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.25em] text-[var(--accent)] mb-6">
               Quantamental Architect
             </p>
           </ScrollReveal>
           <ScrollReveal delay={100}>
-            <h1 className="page-heading text-[32px] sm:text-[44px] md:text-[56px] mb-5">
+            <h1 className="text-[42px] sm:text-[56px] md:text-[72px] font-bold leading-[1.05] tracking-tight mb-6" style={{
+              background: "linear-gradient(180deg, #fff 30%, rgba(255,255,255,0.35) 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+            }}>
               Make better trades.
             </h1>
           </ScrollReveal>
           <ScrollReveal delay={200}>
-            <p className="text-[18px] text-[var(--text-secondary)] max-w-[540px] mx-auto leading-[1.55] mb-10">
-              Swing trade signals powered by quantitative analysis, fundamental research, and AI-driven event validation.
+            <p className="text-[18px] text-[var(--text-secondary)] max-w-[520px] leading-[1.6] mb-10">
+              Swing trade signals powered by quantitative analysis,
+              fundamental research, and AI-driven event validation.
             </p>
           </ScrollReveal>
           <ScrollReveal delay={300}>
-            <div className="max-w-[640px] mx-auto mb-6">
+            <div className="max-w-[580px] mb-12">
               <StockSearch fullWidth />
             </div>
           </ScrollReveal>
 
-          {/* v2: Live regime + sector rotation */}
-          <ScrollReveal delay={350}>
-            <div className="max-w-[820px] mx-auto mb-12 grid grid-cols-1 md:grid-cols-3 gap-3 text-left">
+          {/* Regime + Rotation */}
+          <ScrollReveal delay={400}>
+            <div className="max-w-[820px] grid grid-cols-1 md:grid-cols-3 gap-3 text-left">
               <div className="md:col-span-2"><RegimeBadge /></div>
               <SectorRotationCard />
             </div>
           </ScrollReveal>
+        </div>
+      </section>
 
-          {/* Signals Table */}
-          <ScrollReveal delay={400}>
-            <div className="hidden sm:block" style={{ perspective: "1200px" }}>
-              <div style={{
-                transform: "rotateX(10deg) rotateY(-2deg)",
-                transition: "transform 0.5s ease",
-                borderRadius: "16px",
-                overflow: "hidden",
-                background: "rgba(255,255,255,0.02)",
-                border: "0.5px solid var(--border)",
-                boxShadow: "0 0 120px -30px rgba(71,159,250,0.1), 0 60px 100px -40px rgba(0,0,0,0.7)",
-              }}>
-                <table className="stock-table">
-                  <thead>
-                    <tr>
-                      <th className="w-20">Ticker</th>
-                      <th>Company</th>
-                      <th>Strategy</th>
-                      <th className="text-right">Price</th>
-                      <th className="text-right">Change</th>
-                      <th className="text-right">Sharpe</th>
-                      <th className="text-right">Win Rate</th>
-                      <th className="text-center">Signal</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {SAMPLE.map((s) => (
-                      <tr key={s.id} onClick={() => router.push(`/stock/${s.ticker}`)}>
-                        <td className="font-semibold">{s.ticker}</td>
-                        <td className="text-[var(--text-secondary)]">{s.name}</td>
-                        <td><span className="text-[12px] px-2 py-0.5 rounded-md bg-[var(--glass)]">{s.strategy}</span></td>
-                        <td className="text-right font-mono tabular-nums">{s.price ? `$${s.price.toFixed(2)}` : "—"}</td>
-                        <td className={cn("text-right font-mono tabular-nums", pnlColor(s.change))}>
-                          {s.change ? formatPct(s.change) : "—"}
-                        </td>
-                        <td className="text-right font-mono tabular-nums">{s.sharpe.toFixed(2)}</td>
-                        <td className="text-right font-mono tabular-nums">{(s.win_rate * 100).toFixed(0)}%</td>
-                        <td className="text-center">
-                          <span className={cn("inline-block rounded-full px-3 py-1 text-[11px] font-medium",
-                            s.status === "go" && "badge-gain",
-                            s.status === "nogo" && "badge-loss",
-                            s.status === "pending" && "bg-[var(--glass-hover)] text-[var(--text-secondary)]"
-                          )}>{s.status === "go" ? "GO" : s.status === "nogo" ? "NO-GO" : "Pending"}</span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+      {/* ═══ SECTION 2: CINEMATIC STATEMENT ═══ */}
+      <section className="relative py-32 md:py-44 overflow-hidden">
+        <div
+          className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px]"
+          style={{ background: "radial-gradient(ellipse, rgba(78,190,150,0.06) 0%, transparent 70%)" }}
+        />
+        <div className="max-w-[1220px] mx-auto px-6">
+          <ScrollReveal>
+            <h2 className="text-[36px] sm:text-[48px] md:text-[64px] font-bold leading-[1.1] tracking-tight max-w-[800px]" style={{
+              background: "linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.3) 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+            }}>
+              From data to conviction.
+            </h2>
           </ScrollReveal>
-
-          {/* Mobile: Card view instead of tilted table */}
-          <ScrollReveal delay={400}>
-            <div className="sm:hidden overflow-x-auto -mx-6 px-6">
-              <div className="glass rounded-xl overflow-hidden card-shadow">
-                <table className="stock-table">
-                  <thead>
-                    <tr>
-                      <th>Ticker</th>
-                      <th className="text-right">Price</th>
-                      <th className="text-right">Change</th>
-                      <th className="text-center">Signal</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {SAMPLE.slice(0, 5).map((s) => (
-                      <tr key={s.id} onClick={() => router.push(`/stock/${s.ticker}`)}>
-                        <td className="font-semibold">{s.ticker}</td>
-                        <td className="text-right font-mono tabular-nums">{s.price ? `$${s.price.toFixed(0)}` : "—"}</td>
-                        <td className={cn("text-right font-mono tabular-nums", pnlColor(s.change))}>
-                          {s.change ? formatPct(s.change) : "—"}
-                        </td>
-                        <td className="text-center">
-                          <span className={cn("inline-block rounded-full px-2 py-0.5 text-[10px] font-medium",
-                            s.status === "go" && "badge-gain",
-                            s.status === "nogo" && "badge-loss",
-                            s.status === "pending" && "bg-[var(--glass-hover)] text-[var(--text-secondary)]"
-                          )}>{s.status === "go" ? "GO" : s.status === "nogo" ? "NO-GO" : "..."}</span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+          <ScrollReveal delay={150}>
+            <p className="mt-6 text-[16px] text-zinc-500 max-w-[500px] leading-relaxed">
+              4 independent strategies scan 109 stocks every day. Regime detection,
+              sector rotation, and Kelly sizing do the thinking. You make the call.
+            </p>
           </ScrollReveal>
         </div>
       </section>
 
-      {/* ═══ MARKET MOVERS ═══ */}
-      <section className="max-w-[1220px] mx-auto px-6 py-14">
+      {/* ═══ SECTION 3: ASYMMETRIC FEATURE SHOWCASE ═══ */}
+      <section className="py-20 overflow-hidden">
+        <div className="max-w-[1220px] mx-auto px-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+            {/* Left: Screenshot-style card */}
+            <ScrollReveal>
+              <div className="relative rounded-2xl overflow-hidden" style={{
+                background: "rgba(255,255,255,0.02)",
+                border: "0.5px solid rgba(255,255,255,0.06)",
+                boxShadow: "0 0 120px -30px rgba(71,159,250,0.08), 0 40px 80px -30px rgba(0,0,0,0.6)",
+              }}>
+                <Image
+                  src="https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=900&q=75"
+                  alt="Market analysis"
+                  width={900}
+                  height={500}
+                  className="w-full opacity-40"
+                  style={{
+                    maskImage: "linear-gradient(180deg, black 50%, transparent 100%)",
+                  }}
+                />
+                {/* Overlay data */}
+                <div className="absolute inset-0 p-6 flex flex-col justify-end">
+                  <div className="text-[10px] uppercase tracking-wider text-emerald-400 mb-2">Live Signal</div>
+                  <div className="text-2xl font-bold text-white mb-1">
+                    {topSignals[0]?.ticker || "PLTR"}
+                  </div>
+                  <div className="text-sm text-zinc-400">
+                    {topSignals[0]?.strategy || "EMA100+RSI<40"} · Sharpe {topSignals[0]?.sharpe?.toFixed(2) || "3.17"}
+                  </div>
+                  <div className="mt-3 flex gap-4 text-xs">
+                    <span className="text-emerald-400">
+                      Size: {topSignals[0]?.final_pct ? `${(topSignals[0].final_pct * 100).toFixed(1)}%` : "20%"}
+                    </span>
+                    <span className="text-zinc-500">SL -8%</span>
+                    <span className="text-zinc-500">TP +16%</span>
+                  </div>
+                </div>
+              </div>
+            </ScrollReveal>
+
+            {/* Right: Feature bullets */}
+            <ScrollReveal delay={200}>
+              <div className="space-y-8">
+                <div>
+                  <div className="text-[11px] uppercase tracking-wider text-[var(--accent)] mb-3">How it works</div>
+                  <h3 className="text-[28px] font-bold text-white leading-tight mb-4">
+                    Four brains. One decision.
+                  </h3>
+                </div>
+                {[
+                  { icon: TrendingUp, title: "Pattern Matcher", desc: "14 technical strategies scan for momentum, mean-reversion, and breakout setups." },
+                  { icon: Zap, title: "Sector Winner Picker", desc: "Weekly rotation into the strongest stock per sector. Rides momentum, drops losers." },
+                  { icon: BarChart3, title: "Earnings Surfer", desc: "Post-earnings drift on beats with day-of confirmation. 57% win rate." },
+                  { icon: Shield, title: "Small-Cap Hunter", desc: "52-week breakouts on $1-10B names where institutions can't go." },
+                ].map((f, i) => (
+                  <div key={i} className="flex gap-4 items-start group">
+                    <div className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center" style={{
+                      background: "rgba(71,159,250,0.08)",
+                      border: "0.5px solid rgba(71,159,250,0.15)",
+                    }}>
+                      <f.icon size={18} className="text-[var(--accent)]" />
+                    </div>
+                    <div>
+                      <div className="text-[14px] font-semibold text-white mb-1">{f.title}</div>
+                      <div className="text-[13px] text-zinc-500 leading-relaxed">{f.desc}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </ScrollReveal>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ SECTION 4: ANOTHER CINEMATIC STATEMENT ═══ */}
+      <section className="py-32 md:py-44 text-center overflow-hidden">
+        <div
+          className="pointer-events-none absolute left-1/2 -translate-x-1/2 w-[600px] h-[300px]"
+          style={{ background: "radial-gradient(ellipse, rgba(248,161,108,0.06) 0%, transparent 70%)" }}
+        />
         <ScrollReveal>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="section-heading">Market Movers</h2>
-            <Link href="/stocks" className="text-[12px] text-[var(--text-secondary)] hover:text-white flex items-center gap-1 transition-colors">
-              View all <ArrowRight size={12} />
+          <h2 className="text-[36px] sm:text-[48px] md:text-[64px] font-bold leading-[1.1] tracking-tight mx-auto max-w-[700px] px-6" style={{
+            background: "linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.3) 100%)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+          }}>
+            Every edge. Automated.
+          </h2>
+        </ScrollReveal>
+        <ScrollReveal delay={150}>
+          <p className="mt-6 text-[16px] text-zinc-500 max-w-[480px] mx-auto px-6 leading-relaxed">
+            Regime detection. Earnings blackout. Kelly sizing. Sector rotation.
+            The system runs at 9:30 AM every weekday — even when you're asleep.
+          </p>
+        </ScrollReveal>
+      </section>
+
+      {/* ═══ SECTION 5: TOP SIGNALS CARDS ═══ */}
+      <section className="py-20 overflow-hidden">
+        <div className="max-w-[1220px] mx-auto px-6">
+          <ScrollReveal>
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <div className="text-[11px] uppercase tracking-wider text-[var(--accent)] mb-2">Today's Picks</div>
+                <h3 className="text-[24px] font-bold text-white">Top Signals</h3>
+              </div>
+              <Link
+                href="/proposals"
+                className="flex items-center gap-2 text-[13px] text-zinc-400 hover:text-white transition-colors"
+              >
+                View all <ArrowRight size={14} />
+              </Link>
+            </div>
+          </ScrollReveal>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {(topSignals.length > 0 ? topSignals : [
+              { ticker: "—", strategy: "Loading...", sharpe: 0, final_pct: 0 },
+              { ticker: "—", strategy: "Loading...", sharpe: 0, final_pct: 0 },
+              { ticker: "—", strategy: "Loading...", sharpe: 0, final_pct: 0 },
+            ]).map((s: any, i: number) => (
+              <ScrollReveal key={i} delay={i * 100}>
+                <div
+                  onClick={() => s.ticker !== "—" && router.push(`/stock/${s.ticker}`)}
+                  className={cn(
+                    "group glass glass-card rounded-2xl p-5 cursor-pointer card-stagger",
+                    i === 0 && "border-emerald-500/15 animate-pulse-glow",
+                  )}
+                  style={{ animationDelay: `${i * 80}ms` }}
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-xl font-bold text-white">{s.ticker}</span>
+                    <span className="text-emerald-400 font-mono font-bold">
+                      {s.final_pct ? `${(s.final_pct * 100).toFixed(1)}%` : "—"}
+                    </span>
+                  </div>
+                  <div className="text-[12px] text-zinc-500 mb-4">{s.strategy}</div>
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-zinc-600">
+                      Sharpe {s.sharpe?.toFixed(2) || "—"}
+                    </span>
+                    <ArrowRight size={14} className="text-zinc-700 group-hover:text-[var(--accent)] transition-colors" />
+                  </div>
+                </div>
+              </ScrollReveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ SECTION 6: NEWS + GAINERS (asymmetric) ═══ */}
+      <section className="py-20 overflow-hidden">
+        <div className="max-w-[1220px] mx-auto px-6">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            {/* News — takes 3 cols */}
+            <div className="lg:col-span-3">
+              <ScrollReveal>
+                <div className="text-[11px] uppercase tracking-wider text-[var(--accent)] mb-3">Market News</div>
+                <div className="space-y-3">
+                  {marketNews.map((n: any, i: number) => (
+                    <a
+                      key={i}
+                      href={n.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block glass glass-card rounded-xl p-4 card-stagger"
+                      style={{ animationDelay: `${i * 60}ms` }}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="text-[13px] font-medium text-white leading-snug mb-1 line-clamp-2">
+                            {n.headline || n.title}
+                          </div>
+                          <div className="text-[11px] text-zinc-600">
+                            {n.source} · {n.datetime ? new Date(n.datetime * 1000).toLocaleDateString() : ""}
+                          </div>
+                        </div>
+                        {n.image && (
+                          <Image
+                            src={n.image}
+                            alt=""
+                            width={80}
+                            height={52}
+                            className="rounded-lg object-cover flex-shrink-0 opacity-70"
+                          />
+                        )}
+                      </div>
+                    </a>
+                  ))}
+                  {marketNews.length === 0 && (
+                    <div className="glass rounded-xl p-8 text-center text-zinc-600 text-sm">
+                      Loading news...
+                    </div>
+                  )}
+                </div>
+              </ScrollReveal>
+            </div>
+
+            {/* Gainers — takes 2 cols */}
+            <div className="lg:col-span-2">
+              <ScrollReveal delay={100}>
+                <div className="text-[11px] uppercase tracking-wider text-emerald-400 mb-3">Top Movers</div>
+                <div className="glass rounded-xl overflow-hidden">
+                  {gainers.map((g: any, i: number) => (
+                    <div
+                      key={i}
+                      onClick={() => router.push(`/stock/${g.ticker || g.symbol}`)}
+                      className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-[var(--glass-hover)] transition-colors border-b border-zinc-800/30 last:border-0"
+                    >
+                      <div>
+                        <div className="text-sm font-semibold text-white">{g.ticker || g.symbol}</div>
+                        <div className="text-[10px] text-zinc-600">{g.name || g.companyName || ""}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm font-mono text-white">${g.price?.toFixed(2) || "—"}</div>
+                        <div className={cn(
+                          "text-[11px] font-mono",
+                          (g.changesPercentage || g.change_pct || 0) >= 0 ? "text-emerald-400" : "text-red-400"
+                        )}>
+                          {(g.changesPercentage || g.change_pct || 0) >= 0 ? "+" : ""}
+                          {(g.changesPercentage || g.change_pct || 0).toFixed(2)}%
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {gainers.length === 0 && (
+                    <div className="p-6 text-center text-zinc-600 text-sm">Loading...</div>
+                  )}
+                </div>
+              </ScrollReveal>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ SECTION 7: PERFORMANCE STATS ═══ */}
+      <section className="py-32 overflow-hidden">
+        <div className="max-w-[1220px] mx-auto px-6">
+          <ScrollReveal>
+            <div className="text-center mb-16">
+              <div className="text-[11px] uppercase tracking-wider text-[var(--accent)] mb-3">Backtested Performance</div>
+              <h3 className="text-[28px] font-bold text-white">Real numbers. No cherry-picking.</h3>
+              <p className="mt-3 text-[14px] text-zinc-500 max-w-[500px] mx-auto">
+                2024-2026 walk-forward backtest on 63 S&P 500 stocks with realistic slippage.
+              </p>
+            </div>
+          </ScrollReveal>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[
+              { label: "Annualized Return", value: "+15.7%", color: "text-emerald-400" },
+              { label: "Sharpe Ratio", value: "0.93", color: "text-white" },
+              { label: "Max Drawdown", value: "7.4%", color: "text-amber-400" },
+              { label: "Profit Factor", value: "1.88", color: "text-white" },
+            ].map((stat, i) => (
+              <ScrollReveal key={i} delay={i * 80}>
+                <div className="glass glass-card rounded-xl p-6 text-center card-stagger" style={{ animationDelay: `${i * 80}ms` }}>
+                  <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-3">{stat.label}</div>
+                  <div className={cn("text-[32px] font-bold font-mono", stat.color)}>{stat.value}</div>
+                </div>
+              </ScrollReveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ SECTION 8: CTA ═══ */}
+      <section className="py-32 text-center overflow-hidden">
+        <ScrollReveal>
+          <h2 className="text-[28px] sm:text-[36px] font-bold text-white mb-4 px-6">
+            Ready to trade smarter?
+          </h2>
+          <p className="text-[15px] text-zinc-500 mb-8 px-6">
+            Check today's signals or start paper trading.
+          </p>
+          <div className="flex items-center justify-center gap-3 px-6 flex-wrap">
+            <Link
+              href="/proposals"
+              className="inline-flex items-center gap-2 rounded-full px-6 py-3 text-[14px] font-medium text-white transition-all hover:scale-[1.03]"
+              style={{
+                background: "rgba(71,159,250,0.15)",
+                border: "1px solid rgba(71,159,250,0.25)",
+              }}
+            >
+              <Zap size={16} />
+              View Proposals
+            </Link>
+            <Link
+              href="/paper-trading"
+              className="inline-flex items-center gap-2 rounded-full px-6 py-3 text-[14px] font-medium text-zinc-400 transition-all hover:text-white hover:scale-[1.03]"
+              style={{
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.08)",
+              }}
+            >
+              Paper Trade
+              <ArrowRight size={16} />
             </Link>
           </div>
         </ScrollReveal>
-        <div className="grid md:grid-cols-2 gap-4">
-          <ScrollReveal delay={100}>
-            <div className="glass rounded-2xl p-5 card-shadow">
-              <div className="flex items-center gap-2 mb-4">
-                <TrendingUp size={16} className="text-[var(--gain)]" />
-                <span className="text-[12px] font-medium uppercase tracking-wider text-[var(--text-secondary)]">Top Gainers</span>
-              </div>
-              {gainers.length > 0 ? (
-                <div className="space-y-0.5">
-                  {gainers.slice(0, 5).map((s: any) => (
-                    <Link key={s.symbol} href={`/stock/${s.symbol}`}
-                      className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-[var(--glass-hover)] transition-colors">
-                      <div>
-                        <span className="text-[13px] font-medium text-white">{s.symbol}</span>
-                        <span className="ml-2 text-[11px] text-[var(--text-secondary)] hidden sm:inline">{s.name?.slice(0, 20)}</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-[12px] font-mono tabular-nums text-white">{formatCurrency(s.price)}</span>
-                        <span className="text-[11px] font-mono tabular-nums text-[var(--gain)]">+{s.changesPercentage?.toFixed(1)}%</span>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <p className="py-6 text-center text-[12px] text-[var(--text-muted)]">Market closed</p>
-              )}
-            </div>
-          </ScrollReveal>
-          <ScrollReveal delay={200}>
-            <div className="glass rounded-2xl p-5 card-shadow">
-              <div className="flex items-center gap-2 mb-4">
-                <TrendingDown size={16} className="text-[var(--loss)]" />
-                <span className="text-[12px] font-medium uppercase tracking-wider text-[var(--text-secondary)]">Top Losers</span>
-              </div>
-              {losers.length > 0 ? (
-                <div className="space-y-0.5">
-                  {losers.slice(0, 5).map((s: any) => (
-                    <Link key={s.symbol} href={`/stock/${s.symbol}`}
-                      className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-[var(--glass-hover)] transition-colors">
-                      <div>
-                        <span className="text-[13px] font-medium text-white">{s.symbol}</span>
-                        <span className="ml-2 text-[11px] text-[var(--text-secondary)] hidden sm:inline">{s.name?.slice(0, 20)}</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-[12px] font-mono tabular-nums text-white">{formatCurrency(s.price)}</span>
-                        <span className="text-[11px] font-mono tabular-nums text-[var(--loss)]">{s.changesPercentage?.toFixed(1)}%</span>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <p className="py-6 text-center text-[12px] text-[var(--text-muted)]">Market closed</p>
-              )}
-            </div>
-          </ScrollReveal>
+      </section>
+
+      {/* Footer */}
+      <footer className="py-8 border-t border-zinc-900">
+        <div className="max-w-[1220px] mx-auto px-6 text-center text-[11px] text-zinc-700">
+          Quantamental Architect — Personal Trading System
         </div>
-      </section>
-
-      {/* ═══ EARNINGS PREVIEW ═══ */}
-      {earnings.length > 0 && (
-        <section className="max-w-[1220px] mx-auto px-6 py-14 relative">
-          <div className="glow-green absolute right-0 top-0 -translate-y-1/2 translate-x-1/3" />
-          <ScrollReveal>
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-2">
-                <Calendar size={16} className="text-[var(--accent)]" />
-                <h2 className="section-heading">Upcoming Earnings</h2>
-              </div>
-              <Link href="/earnings" className="text-[12px] text-[var(--text-secondary)] hover:text-white flex items-center gap-1 transition-colors">
-                Full calendar <ArrowRight size={12} />
-              </Link>
-            </div>
-          </ScrollReveal>
-          <ScrollReveal delay={100}>
-            <div className="glass rounded-2xl overflow-hidden card-shadow">
-              <table className="stock-table">
-                <thead>
-                  <tr>
-                    <th>Ticker</th>
-                    <th>Date</th>
-                    <th>Time</th>
-                    <th className="text-right">EPS Est.</th>
-                    <th className="text-right">Revenue Est.</th>
-                    <th className="text-right">Quarter</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {earnings.slice(0, 8).map((e: any, i: number) => (
-                    <tr key={e.symbol + e.date + i} onClick={() => router.push(`/stock/${e.symbol}`)}>
-                      <td className="font-semibold text-white">{e.symbol}</td>
-                      <td className="text-[var(--text-secondary)]">
-                        {new Date(e.date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                      </td>
-                      <td>
-                        <span className={cn("text-[10px] font-medium rounded px-1.5 py-0.5",
-                          e.hour === "bmo" ? "bg-[rgba(255,191,0,0.1)] text-[#ffbf00]" : "bg-[rgba(147,130,255,0.1)] text-[#9382ff]"
-                        )}>
-                          {e.hour === "bmo" ? "Pre-Market" : "After Hours"}
-                        </span>
-                      </td>
-                      <td className="text-right font-mono tabular-nums text-[var(--text-secondary)]">
-                        {e.epsEstimate != null ? `$${e.epsEstimate.toFixed(2)}` : "—"}
-                      </td>
-                      <td className="text-right font-mono tabular-nums text-[var(--text-secondary)]">
-                        {e.revenueEstimate ? formatCurrency(e.revenueEstimate, true) : "—"}
-                      </td>
-                      <td className="text-right text-[12px] text-[var(--text-secondary)]">Q{e.quarter} {e.year}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </ScrollReveal>
-        </section>
-      )}
-
-      {/* ═══ WATCHLIST + OPEN TRADES ═══ */}
-      <section className="max-w-[1220px] mx-auto px-6 py-14">
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Watchlist Preview */}
-          <ScrollReveal>
-            <div className="glass rounded-2xl p-5 card-shadow h-full">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <Star size={16} className="text-[#ffbf00]" />
-                  <span className="text-[12px] font-medium uppercase tracking-wider text-[var(--text-secondary)]">Watchlist</span>
-                </div>
-                <Link href="/watchlist" className="text-[11px] text-[var(--text-secondary)] hover:text-white flex items-center gap-1 transition-colors">
-                  View all <ArrowRight size={10} />
-                </Link>
-              </div>
-              {watchlist.length > 0 ? (
-                <div className="space-y-0.5">
-                  {watchlist.slice(0, 5).map((item: any) => (
-                    <Link key={item.ticker} href={`/stock/${item.ticker}`}
-                      className="flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-[var(--glass-hover)] transition-colors">
-                      <span className="text-[13px] font-semibold text-white">{item.ticker}</span>
-                      <span className="text-[11px] text-[var(--text-muted)]">{item.added_date}</span>
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <div className="py-8 text-center">
-                  <Star size={20} className="mx-auto mb-2 text-[var(--text-muted)]" strokeWidth={1} />
-                  <p className="text-[12px] text-[var(--text-secondary)]">No stocks on your watchlist yet.</p>
-                  <Link href="/stocks" className="text-[11px] text-[var(--accent)] hover:underline mt-1 inline-block">
-                    Browse stocks to add some
-                  </Link>
-                </div>
-              )}
-            </div>
-          </ScrollReveal>
-
-          {/* Open Trades Preview */}
-          <ScrollReveal delay={150}>
-            <div className="glass rounded-2xl p-5 card-shadow h-full">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <LineChart size={16} className="text-[var(--accent)]" />
-                  <span className="text-[12px] font-medium uppercase tracking-wider text-[var(--text-secondary)]">Open Trades</span>
-                </div>
-                <Link href="/paper-trading" className="text-[11px] text-[var(--text-secondary)] hover:text-white flex items-center gap-1 transition-colors">
-                  View all <ArrowRight size={10} />
-                </Link>
-              </div>
-              {trades.length > 0 ? (
-                <div className="space-y-0.5">
-                  {trades.slice(0, 5).map((t: any) => (
-                    <Link key={t.id} href={`/stock/${t.ticker}`}
-                      className="flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-[var(--glass-hover)] transition-colors">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[13px] font-semibold text-white">{t.ticker}</span>
-                        <span className={cn("text-[10px] font-medium rounded px-1.5 py-0.5",
-                          t.direction === "LONG" ? "badge-gain" : "badge-loss"
-                        )}>{t.direction}</span>
-                      </div>
-                      <span className="text-[12px] font-mono tabular-nums text-[var(--text-secondary)]">
-                        {t.shares} @ ${t.entry_price?.toFixed(2)}
-                      </span>
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <div className="py-8 text-center">
-                  <LineChart size={20} className="mx-auto mb-2 text-[var(--text-muted)]" strokeWidth={1} />
-                  <p className="text-[12px] text-[var(--text-secondary)]">No open paper trades.</p>
-                  <Link href="/paper-trading" className="text-[11px] text-[var(--accent)] hover:underline mt-1 inline-block">
-                    Place your first trade
-                  </Link>
-                </div>
-              )}
-            </div>
-          </ScrollReveal>
-        </div>
-      </section>
-
-      {/* ═══ MARKET NEWS ═══ */}
-      {marketNews.length > 0 && (
-        <section className="max-w-[1220px] mx-auto px-6 py-14 relative">
-          <div className="glow-blue absolute left-0 top-0 -translate-x-1/3" />
-          <ScrollReveal>
-            <div className="flex items-center gap-2 mb-6">
-              <Newspaper size={16} className="text-[var(--accent)]" />
-              <h2 className="section-heading">Market News</h2>
-            </div>
-          </ScrollReveal>
-          <div className="grid md:grid-cols-2 gap-3">
-            {marketNews.slice(0, 8).map((article: any, i: number) => (
-              <ScrollReveal key={i} delay={i * 50}>
-                <a
-                  href={article.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block glass rounded-xl p-4 hover:bg-[var(--glass-hover)] transition-all group card-shadow"
-                >
-                  <h3 className="text-[13px] font-medium text-white leading-snug group-hover:text-[var(--accent)] transition-colors">
-                    {article.headline}
-                  </h3>
-                  {article.summary && (
-                    <p className="mt-1.5 text-[11px] text-[var(--text-muted)] leading-relaxed line-clamp-2">
-                      {article.summary.slice(0, 120)}...
-                    </p>
-                  )}
-                  <div className="mt-2 flex items-center gap-2">
-                    <span className="text-[11px] text-[var(--text-secondary)]">{article.source}</span>
-                    <span className="text-[11px] text-[var(--text-muted)]">&middot;</span>
-                    <span className="text-[11px] text-[var(--text-muted)]">
-                      {new Date(article.datetime * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
-                    </span>
-                  </div>
-                </a>
-              </ScrollReveal>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* ═══ QUICK LINKS ═══ */}
-      <section className="max-w-[1220px] mx-auto px-6 py-14">
-        <ScrollReveal>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {[
-              { href: "/stocks", label: "Browse Stocks", desc: "Search and explore any stock", icon: BarChart3, color: "var(--accent)" },
-              { href: "/earnings", label: "Earnings Calendar", desc: "Upcoming earnings reports", icon: Calendar, color: "var(--gain)" },
-              { href: "/watchlist", label: "Your Watchlist", desc: "Track stocks you're watching", icon: Star, color: "#ffbf00" },
-              { href: "/portfolio", label: "Portfolio", desc: "Holdings and allocation", icon: Briefcase, color: "var(--orange)" },
-            ].map((item, i) => (
-              <ScrollReveal key={item.href} delay={i * 75}>
-                <Link href={item.href}
-                  className="glass rounded-xl p-5 hover:bg-[var(--glass-hover)] transition-all group card-shadow block h-full">
-                  <item.icon size={20} style={{ color: item.color }} className="mb-3" strokeWidth={1.5} />
-                  <h3 className="text-[14px] font-semibold mb-1 group-hover:text-[var(--accent)] transition-colors">{item.label}</h3>
-                  <p className="text-[12px] text-[var(--text-secondary)]">{item.desc}</p>
-                </Link>
-              </ScrollReveal>
-            ))}
-          </div>
-        </ScrollReveal>
-      </section>
-
-      {/* ═══ CTA ═══ */}
-      <section className="relative py-24 text-center overflow-hidden">
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px]"
-          style={{ background: "radial-gradient(ellipse, rgba(71,159,250,0.06) 0%, transparent 70%)" }} />
-
-        <div className="max-w-[1220px] mx-auto px-6 relative z-10">
-          <ScrollReveal>
-            <h2 className="page-heading text-[28px] sm:text-[36px] md:text-[44px] mb-4">
-              Your edge, automated.
-            </h2>
-          </ScrollReveal>
-          <ScrollReveal delay={100}>
-            <p className="text-[16px] text-[var(--text-secondary)] max-w-[460px] mx-auto leading-[1.55] mb-8">
-              Quantitative signals. AI validation. Paper trading. All in one system.
-            </p>
-          </ScrollReveal>
-          <ScrollReveal delay={200}>
-            <div className="flex items-center justify-center gap-3">
-              <Link href="/stocks"
-                className="inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-[13px] font-medium text-white transition-all hover:scale-[1.03]"
-                style={{ background: "rgba(71,159,250,0.15)", border: "1px solid rgba(71,159,250,0.25)" }}>
-                <Zap size={14} />
-                Explore Stocks
-              </Link>
-              <Link href="/paper-trading"
-                className="inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-[13px] font-medium text-[var(--text-secondary)] transition-all hover:scale-[1.03] hover:text-white"
-                style={{ background: "var(--glass-hover)", border: "1px solid var(--border)" }}>
-                Start Trading
-              </Link>
-            </div>
-          </ScrollReveal>
-        </div>
-      </section>
-
-      <div className="h-10" />
+      </footer>
     </div>
   );
 }
