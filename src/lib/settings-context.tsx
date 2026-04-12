@@ -92,6 +92,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           .maybeSingle();
 
         if (!error && data && !cancelled) {
+          // Capture the row ID so persistToSupabase updates THIS row
+          if (data.id) _settingsRowId = data.id;
           setSettings((prev) => ({
             ...prev,
             timeframe: data.timeframe ?? prev.timeframe,
@@ -140,26 +142,54 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
 // ── Persist helper ──────────────────────────────────────────────────────────
 
+// Track the row ID so we update the EXISTING row, not create a new one
+let _settingsRowId: string | null = null;
+
 async function persistToSupabase(s: AppSettings) {
   const supabase = getOptionalSupabase();
   if (!supabase) return;
 
+  const payload = {
+    timeframe: s.timeframe,
+    auto_mode: s.autoMode,
+    starting_balance: s.startingBalance,
+    stop_loss_pct: s.stopLossPct,
+    take_profit_pct: s.takeProfitPct,
+    max_position_pct: s.maxPositionPct,
+    data_refresh_min: s.dataRefreshMin,
+    ollama_url: s.ollamaUrl,
+    ollama_model: s.ollamaModel,
+  };
+
   try {
-    await supabase.from("user_settings").upsert(
-      {
-        id: 1, // single-user app — always row 1
-        timeframe: s.timeframe,
-        auto_mode: s.autoMode,
-        starting_balance: s.startingBalance,
-        stop_loss_pct: s.stopLossPct,
-        take_profit_pct: s.takeProfitPct,
-        max_position_pct: s.maxPositionPct,
-        data_refresh_min: s.dataRefreshMin,
-        ollama_url: s.ollamaUrl,
-        ollama_model: s.ollamaModel,
-      },
-      { onConflict: "id" },
-    );
+    if (_settingsRowId) {
+      // Update the existing row
+      await supabase
+        .from("user_settings")
+        .update(payload)
+        .eq("id", _settingsRowId);
+    } else {
+      // No row ID yet — try to find one, or insert
+      const { data } = await supabase
+        .from("user_settings")
+        .select("id")
+        .limit(1)
+        .maybeSingle();
+      if (data?.id) {
+        _settingsRowId = data.id;
+        await supabase
+          .from("user_settings")
+          .update(payload)
+          .eq("id", _settingsRowId);
+      } else {
+        const { data: inserted } = await supabase
+          .from("user_settings")
+          .insert(payload)
+          .select("id")
+          .single();
+        if (inserted?.id) _settingsRowId = inserted.id;
+      }
+    }
   } catch {
     // Silent failure — Supabase is optional.
   }
