@@ -151,14 +151,20 @@ export async function GET(req: NextRequest) {
       const hitStop = pnlPct <= -tradeStopLoss;
       const hitTP = pnlPct >= tradeTakeProfit;
 
-      if (hitStop || hitTP) {
+      // Time-stop check: 21+ days held and < 3% gain = will auto-close
+      const entryDate = new Date(trade.entry_date || trade.created_at);
+      const daysHeld = Math.floor((Date.now() - entryDate.getTime()) / 86400000);
+      const hitTimeStop = daysHeld >= 21 && pnlPct < 3;
+
+      if (hitStop || hitTP || hitTimeStop) {
         pendingExits.push({
           ticker: trade.ticker,
           shares: trade.shares,
           entry_price: trade.entry_price,
           current_price: Math.round(currentPrice * 100) / 100,
           pnl_pct: Math.round(pnlPct * 10) / 10,
-          exit_reason: hitStop ? "stop_loss" : "take_profit",
+          days_held: daysHeld,
+          exit_reason: hitStop ? "stop_loss" : hitTP ? "take_profit" : "time_stop (flat 21+ days)",
           strategy: trade.strategy || "unknown",
           scaled_out: trade.scaled_out || false,
         });

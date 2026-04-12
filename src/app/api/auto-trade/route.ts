@@ -266,11 +266,35 @@ export async function POST(_req: NextRequest) {
           if (!error) tradesClosed++;
 
         } else {
-          // Update current P&L on the record
-          await supabase
-            .from("paper_trades")
-            .update({ pnl_pct: Math.round(pnlPct * 100) / 100 })
-            .eq("id", trade.id);
+          // ── TIME-STOP: close flat positions after 21 trading days ──
+          // A stock that goes nowhere for 3 weeks is dead money. Your
+          // capital should be redeployed into a better opportunity.
+          // Rule: if open > 21 days AND gain < 3%, close it.
+          const entryDate = new Date(trade.entry_date);
+          const now = new Date();
+          const daysHeld = Math.floor((now.getTime() - entryDate.getTime()) / 86400000);
+
+          if (daysHeld >= 21 && pnlPct < 3) {
+            const { error } = await supabase
+              .from("paper_trades")
+              .update({
+                status: "closed",
+                exit_price: currentPrice,
+                exit_date: now.toISOString(),
+                pnl_pct: Math.round(pnlPct * 100) / 100,
+                exit_reason: daysHeld >= 21 && pnlPct < 0
+                  ? "time_stop_loss"        // Held 3+ weeks and still losing
+                  : "time_stop_flat",        // Held 3+ weeks and barely moved
+              })
+              .eq("id", trade.id);
+            if (!error) tradesClosed++;
+          } else {
+            // Just update the P&L
+            await supabase
+              .from("paper_trades")
+              .update({ pnl_pct: Math.round(pnlPct * 100) / 100 })
+              .eq("id", trade.id);
+          }
         }
       }
     }
