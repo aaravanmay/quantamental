@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { ArrowRight, TrendingUp, Shield, Clock } from "lucide-react";
 import { RegimeBadge } from "@/components/RegimeBadge";
 import { SectorRotationCard } from "@/components/SectorRotationCard";
+import { cn } from "@/lib/utils";
 
 type Proposal = {
   ticker: string;
@@ -18,15 +20,12 @@ type Proposal = {
   sector?: string;
   sector_leader?: boolean;
   earnings_warning?: boolean;
+  confluence?: boolean;
 };
 
 type Scan = {
   proposals: Proposal[];
   regime?: { name?: string; risk_multiplier?: number };
-  rotation?: { leaders?: any[]; laggards?: any[] };
-  vetoed?: string[];
-  halted?: boolean;
-  scan_date?: string;
   generated_at?: string;
   source?: string;
 };
@@ -34,168 +33,231 @@ type Scan = {
 export default function ProposalsPage() {
   const [scan, setScan] = useState<Scan | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/v2/daily-scan")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.error) setError(data.error);
-        else setScan(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(err.message);
-        setLoading(false);
-      });
+    async function load() {
+      try {
+        const r = await fetch("/api/v2/daily-scan");
+        if (r.ok) {
+          const data = await r.json();
+          if (!data.error) setScan(data);
+        }
+      } catch {}
+      setLoading(false);
+    }
+    load();
+    const interval = setInterval(load, 60_000);
+    return () => clearInterval(interval);
   }, []);
 
+  const proposals = scan?.proposals || [];
+
   return (
-    <div className="max-w-[1200px] mx-auto px-6 py-8">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-white mb-1">Today's Proposals</h1>
-        <p className="text-sm text-zinc-400">
-          Regime-filtered, news-vetoed, Kelly-sized trade ideas from the v2 engine
-          {scan?.source && (
-            <span className="ml-2 text-zinc-500">— source: {scan.source}</span>
-          )}
-        </p>
-      </div>
+    <div className="relative overflow-hidden">
+      {/* Atmospheric glow */}
+      <div
+        className="pointer-events-none absolute left-1/2 -top-20 -translate-x-1/2 w-[700px] h-[400px]"
+        style={{
+          background: "radial-gradient(ellipse, rgba(71,159,250,0.05) 0%, transparent 70%)",
+        }}
+      />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        <div className="lg:col-span-2"><RegimeBadge /></div>
-        <SectorRotationCard />
-      </div>
-
-      {loading && (
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-12 text-center text-zinc-500">
-          Loading proposals...
-        </div>
-      )}
-
-      {error && (
-        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-6 text-red-300">
-          Error: {error}
-        </div>
-      )}
-
-      {scan?.halted && (
-        <div className="rounded-xl border border-red-500/40 bg-red-500/15 p-6 mb-6">
-          <div className="text-red-300 font-bold text-lg mb-1">⛔ Trading halted</div>
-          <div className="text-red-300/80 text-sm">
-            Current regime is CRASH or portfolio drawdown limit hit. No new positions today.
+      <div className="max-w-[1220px] mx-auto px-6 py-8 relative z-10">
+        {/* Header */}
+        <div className="mb-6 animate-fade-in">
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="page-heading text-[32px]">Today's Proposals</h1>
+            <span className="inline-block rounded-full px-2.5 py-0.5 text-[10px] font-medium badge-gain animate-pulse">
+              LIVE
+            </span>
           </div>
-        </div>
-      )}
-
-      {scan && !scan.halted && (
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/30 overflow-hidden">
-          <div className="px-4 py-3 border-b border-zinc-800 flex items-center justify-between">
-            <div className="text-sm text-zinc-400">
-              {scan.proposals.length} proposals
-              {scan.vetoed && scan.vetoed.length > 0 && (
-                <span className="ml-3 text-red-400">
-                  · {scan.vetoed.length} vetoed by news ({scan.vetoed.join(", ")})
-                </span>
-              )}
-            </div>
-            {scan.generated_at && (
-              <div className="text-xs text-zinc-500">
-                Generated: {new Date(scan.generated_at).toLocaleString()}
-              </div>
+          <p className="text-[14px] text-[var(--text-secondary)]">
+            Regime-filtered, Kelly-sized trade ideas
+            {scan?.source && (
+              <span className="ml-2 text-zinc-600">— {scan.source}</span>
             )}
-          </div>
+          </p>
+          {scan?.generated_at && (
+            <p className="mt-1 text-[11px] text-zinc-600">
+              Updated: {new Date(scan.generated_at).toLocaleString()}
+            </p>
+          )}
+        </div>
 
-          {scan.proposals.length === 0 ? (
-            <div className="p-12 text-center text-zinc-500">
-              No proposals — current regime + sector filters reject all candidates.
+        {/* Regime + Sector context */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-8 animate-fade-in-up" style={{ animationDelay: "100ms" }}>
+          <div className="md:col-span-2"><RegimeBadge /></div>
+          <SectorRotationCard />
+        </div>
+
+        {/* Summary stats */}
+        <div className="grid grid-cols-3 gap-3 mb-6 animate-fade-in-up" style={{ animationDelay: "200ms" }}>
+          <div className="glass glass-card rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <TrendingUp size={14} className="text-emerald-400" />
+              <span className="text-[10px] uppercase tracking-wider text-zinc-500">Proposals</span>
             </div>
-          ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-[11px] uppercase tracking-wider text-zinc-500 border-b border-zinc-800">
-                  <th className="px-4 py-2 font-medium">Ticker</th>
-                  <th className="px-4 py-2 font-medium">Strategy</th>
-                  <th className="px-4 py-2 font-medium text-right">Sharpe</th>
-                  <th className="px-4 py-2 font-medium text-right">Size</th>
-                  <th className="px-4 py-2 font-medium text-right">Stop / TP</th>
-                  <th className="px-4 py-2 font-medium">Sector</th>
-                  <th className="px-4 py-2 font-medium">Notes</th>
-                </tr>
-              </thead>
-              <tbody>
-                {scan.proposals.map((p, i) => (
-                  <tr
-                    key={i}
-                    className="border-b border-zinc-800/50 hover:bg-zinc-800/30 transition"
-                  >
-                    <td className="px-4 py-3">
-                      <Link
-                        href={`/stock/${p.ticker}`}
-                        className="font-bold text-white hover:text-blue-400"
-                      >
-                        {p.ticker}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3 text-zinc-300">
-                      <span className="font-mono text-xs">{p.strategy}</span>
-                      {p.strategy_type && (
-                        <span className="ml-2 text-[10px] text-zinc-500 uppercase">
-                          {p.strategy_type}
+            <div className="text-2xl font-bold text-white">{proposals.length}</div>
+          </div>
+          <div className="glass glass-card rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Shield size={14} className="text-blue-400" />
+              <span className="text-[10px] uppercase tracking-wider text-zinc-500">Regime</span>
+            </div>
+            <div className="text-lg font-bold text-white">{scan?.regime?.name || "—"}</div>
+          </div>
+          <div className="glass glass-card rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Clock size={14} className="text-amber-400" />
+              <span className="text-[10px] uppercase tracking-wider text-zinc-500">Execute After</span>
+            </div>
+            <div className="text-lg font-bold text-amber-400">9:45 ET</div>
+          </div>
+        </div>
+
+        {/* Loading state */}
+        {loading && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="glass rounded-xl p-4 space-y-3">
+                <div className="skeleton h-6 w-20" />
+                <div className="skeleton h-4 w-40" />
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="skeleton h-10" />
+                  <div className="skeleton h-10" />
+                  <div className="skeleton h-10" />
+                </div>
+                <div className="skeleton h-3 w-full" />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Halted state */}
+        {scan?.regime?.name === "CRASH" && (
+          <div className="glass rounded-xl border-red-500/30 bg-red-500/5 p-6 mb-6 animate-fade-in">
+            <div className="text-red-400 font-bold text-lg mb-1">Trading Halted</div>
+            <div className="text-red-300/70 text-sm">
+              CRASH regime detected. No new positions until conditions stabilize.
+            </div>
+          </div>
+        )}
+
+        {/* Proposal cards */}
+        {!loading && proposals.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {proposals.map((p, i) => {
+              const sl = p.stop_loss ?? 0.08;
+              const tp = p.take_profit ?? 0.16;
+              const wr = p.win_rate ?? 0.5;
+              const expGain = wr * tp - (1 - wr) * sl;
+
+              return (
+                <Link
+                  key={`${p.ticker}-${i}`}
+                  href={`/stock/${p.ticker}`}
+                  className={cn(
+                    "group glass glass-card rounded-xl p-4 card-stagger block",
+                    p.confluence && "border-emerald-500/20 animate-pulse-glow",
+                  )}
+                  style={{ animationDelay: `${i * 60}ms` }}
+                >
+                  {/* Header */}
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg font-bold text-white">{p.ticker}</span>
+                      {p.sector_leader && <span className="text-amber-400 text-xs">★</span>}
+                      {p.confluence && (
+                        <span className="text-[9px] font-medium text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                          MULTI
                         </span>
                       )}
-                    </td>
-                    <td className="px-4 py-3 text-right font-mono text-zinc-300">
-                      {p.sharpe?.toFixed(2) ?? "—"}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <span className="font-mono font-bold text-emerald-400">
-                        {(p.final_pct * 100).toFixed(1)}%
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right text-xs text-zinc-400 font-mono">
-                      -{(p.stop_loss * 100).toFixed(1)}% / +{(p.take_profit * 100).toFixed(1)}%
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1">
-                        <span className="text-xs text-zinc-300">{p.sector || "—"}</span>
-                        {p.sector_leader && (
-                          <span className="text-amber-400 text-xs" title="Sector leader">
-                            ★
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-zinc-500">
-                      {p.earnings_warning && (
-                        <span className="text-amber-400">⚠ earnings ≤3d</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      )}
+                    </div>
+                    <span className="text-emerald-400 font-mono font-bold text-sm">
+                      {(p.final_pct * 100).toFixed(1)}%
+                    </span>
+                  </div>
 
-      <div className="mt-6 space-y-2 text-xs text-zinc-500">
-        <p>
-          Sizing uses fractional Kelly × regime multiplier × correlation penalty. Stops are
-          support-anchored (1% below prior day low / SMA20 / nearest round number).
-          Strategies are pre-filtered by current sector rotation: laggard sectors are
-          excluded; leader sectors get a 1.2× sizing boost.
-        </p>
-        <p className="text-amber-400/90">
-          ⏰ <strong>Execution note:</strong> Wait until <strong>9:45 ET</strong> after market
-          open before firing orders. The 9:30-9:45 window has the widest spreads of the day.
-          Use limit orders at the 9:45 price, not market orders at the open.
-        </p>
-        <p className="text-red-400/80">
-          ⛔ <strong>Earnings blackout:</strong> No new positions within 2 trading days of any
-          ticker's earnings announcement. Tickers in the blackout window are auto-filtered
-          before this list is generated.
-        </p>
+                  {/* Strategy */}
+                  <div className="text-[11px] text-zinc-500 mb-3 truncate">
+                    {p.strategy}
+                    {p.strategy_type && (
+                      <span className="ml-1 text-zinc-600 uppercase">{p.strategy_type}</span>
+                    )}
+                  </div>
+
+                  {/* Stats */}
+                  <div className="grid grid-cols-3 gap-2 mb-3">
+                    <div>
+                      <div className="text-[9px] uppercase tracking-wider text-zinc-600">Sharpe</div>
+                      <div className="text-sm font-mono font-semibold text-white">
+                        {p.sharpe?.toFixed(2) ?? "—"}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] uppercase tracking-wider text-zinc-600">Win Rate</div>
+                      <div className="text-sm font-mono font-semibold text-white">
+                        {wr ? `${Math.round(wr * 100)}%` : "—"}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] uppercase tracking-wider text-zinc-600">Exp. Gain</div>
+                      <div className={cn(
+                        "text-sm font-mono font-semibold",
+                        expGain > 0 ? "text-emerald-400" : "text-red-400"
+                      )}>
+                        {expGain > 0 ? "+" : ""}{(expGain * 100).toFixed(1)}%
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Risk bar */}
+                  <div className="mb-3">
+                    <div className="flex items-center gap-2 text-[10px]">
+                      <span className="text-red-400 font-mono">-{(sl * 100).toFixed(0)}%</span>
+                      <div className="flex-1 h-1.5 rounded-full bg-zinc-800 overflow-hidden">
+                        <div
+                          className="h-full rounded-full"
+                          style={{
+                            width: `${Math.min(100, wr * 100)}%`,
+                            background: "linear-gradient(90deg, rgba(248,113,113,0.4), rgba(16,185,129,0.6))",
+                          }}
+                        />
+                      </div>
+                      <span className="text-emerald-400 font-mono">+{(tp * 100).toFixed(0)}%</span>
+                    </div>
+                  </div>
+
+                  {/* Footer */}
+                  <div className="flex items-center justify-between pt-2 border-t border-zinc-800/50">
+                    <span className="text-[10px] text-zinc-600">{p.sector || "—"}</span>
+                    <ArrowRight size={14} className="text-zinc-700 group-hover:text-[var(--accent)] transition-colors" />
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Empty state */}
+        {!loading && proposals.length === 0 && (
+          <div className="glass rounded-xl p-12 text-center animate-fade-in">
+            <p className="text-zinc-400">No proposals today — regime or sector filters may be blocking signals.</p>
+          </div>
+        )}
+
+        {/* Footer warnings */}
+        <div className="mt-8 space-y-2 text-[11px] text-zinc-600 animate-fade-in" style={{ animationDelay: "400ms" }}>
+          <p>
+            Size shows Kelly-optimal position as % of portfolio. Sorted by conviction.
+          </p>
+          <p className="text-amber-500/80">
+            ⏰ Execute after <strong>9:45 ET</strong>. Use limit orders at the 9:45 price.
+          </p>
+          <p className="text-red-400/70">
+            ⛔ Earnings blackout active — tickers within 2 trading days of earnings are auto-filtered.
+          </p>
+        </div>
       </div>
     </div>
   );
