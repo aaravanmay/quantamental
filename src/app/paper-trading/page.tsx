@@ -287,12 +287,29 @@ export default function PaperTradingPage() {
                   </h3>
                 </div>
                 <p className="text-[13px] text-[#868F97] leading-relaxed">
-                  GO signals from the Stock Finder will be automatically paper-traded
-                  at next market open. Exit rules: stop-loss at -{settings.stopLossPct}%, take-profit at
-                  +{settings.takeProfitPct}%, max position {settings.maxPositionPct}% of portfolio.
+                  Signals are auto-traded at 9:30 AM ET every weekday (even when this tab is closed).
+                  Each trade has its own stop-loss and take-profit from the v2 engine.
                 </p>
+                <button
+                  onClick={async () => {
+                    try {
+                      await fetch("/api/auto-trade", { method: "POST" });
+                      window.location.reload();
+                    } catch {}
+                  }}
+                  className="mt-3 text-[12px] font-medium text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  Execute Now (paper trade current signals)
+                </button>
               </div>
             </div>
+          </ScrollReveal>
+        )}
+
+        {/* Pending Orders — what the system WILL buy at next open */}
+        {mode === "auto" && (
+          <ScrollReveal>
+            <PendingOrders />
           </ScrollReveal>
         )}
 
@@ -722,6 +739,134 @@ function StatCard({
           {value}
         </div>
       </div>
+    </div>
+  );
+}
+
+
+// ── Pending Orders Component ──────────────────────────────────────────
+// Shows what the auto-trade system WILL buy/sell at next market open.
+// Fetches from /api/auto-trade/preview which runs the v2 daily-scan
+// and shows the results without executing.
+
+function PendingOrders() {
+  const [preview, setPreview] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await fetch("/api/auto-trade/preview");
+        if (res.ok) {
+          setPreview(await res.json());
+        }
+      } catch {}
+      setLoading(false);
+    }
+    load();
+    // Refresh every 60 seconds
+    const interval = setInterval(load, 60_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="glass rounded-xl p-6 mb-8 text-center text-zinc-500 text-sm">
+        Loading pending orders...
+      </div>
+    );
+  }
+
+  if (!preview) return null;
+
+  const buys = preview.pending_buys || [];
+  const exits = preview.pending_exits || [];
+
+  return (
+    <div className="mb-8 space-y-3">
+      {/* Pending Buys */}
+      {buys.length > 0 && (
+        <div className="glass rounded-xl overflow-hidden">
+          <div className="px-4 py-3 border-b border-zinc-800/50">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-[12px] font-semibold text-emerald-400 uppercase tracking-wider">
+                Buying at Next Open ({buys.length} orders)
+              </span>
+            </div>
+          </div>
+          <div className="divide-y divide-zinc-800/30">
+            {buys.map((b: any, i: number) => (
+              <div key={i} className="px-4 py-3 flex items-center justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="text-sm font-bold text-white">{b.ticker}</span>
+                    <span className="text-[10px] text-zinc-500">{b.strategy}</span>
+                    {b.confluence && (
+                      <span className="text-[9px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">MULTI</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 text-[11px] text-zinc-400">
+                    <span>{b.shares} shares @ ${b.price}</span>
+                    <span className="text-zinc-600">|</span>
+                    <span className="text-emerald-400">{b.size_pct}% of portfolio</span>
+                    <span className="text-zinc-600">|</span>
+                    <span>{b.sector}</span>
+                  </div>
+                </div>
+                <div className="text-right text-[10px]">
+                  <div className="text-red-400">SL -{b.stop_loss_pct}%</div>
+                  <div className="text-emerald-400">TP +{b.take_profit_pct}%</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="px-4 py-2 border-t border-zinc-800/50 text-[10px] text-zinc-600">
+            Execute after 9:45 ET with limit orders. Regime: {preview.summary?.regime || "—"}
+          </div>
+        </div>
+      )}
+
+      {/* Pending Exits */}
+      {exits.length > 0 && (
+        <div className="glass rounded-xl overflow-hidden">
+          <div className="px-4 py-3 border-b border-zinc-800/50">
+            <span className="text-[12px] font-semibold text-red-400 uppercase tracking-wider">
+              Selling ({exits.length} exits)
+            </span>
+          </div>
+          <div className="divide-y divide-zinc-800/30">
+            {exits.map((e: any, i: number) => (
+              <div key={i} className="px-4 py-3 flex items-center justify-between">
+                <div>
+                  <span className="text-sm font-bold text-white">{e.ticker}</span>
+                  <span className="ml-2 text-[11px] text-zinc-400">{e.shares} shares</span>
+                </div>
+                <div className="text-right">
+                  <span className={cn(
+                    "text-sm font-mono font-semibold",
+                    e.pnl_pct >= 0 ? "text-emerald-400" : "text-red-400"
+                  )}>
+                    {e.pnl_pct >= 0 ? "+" : ""}{e.pnl_pct}%
+                  </span>
+                  <div className="text-[10px] text-zinc-500">{e.exit_reason}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* No pending orders */}
+      {buys.length === 0 && exits.length === 0 && (
+        <div className="glass rounded-xl p-5 text-center">
+          <p className="text-[13px] text-zinc-400">No pending orders right now.</p>
+          <p className="text-[11px] text-zinc-600 mt-1">
+            {preview.existing_open || 0} positions currently open.
+            The system scans at 9:30 AM ET every weekday.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
