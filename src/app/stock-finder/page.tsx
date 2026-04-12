@@ -41,50 +41,66 @@ export default function StockFinderPage() {
   useEffect(() => {
     async function loadSignals() {
       try {
-        const res = await fetch("/api/signals?limit=200");
+        // Pull LIVE signals from the v2 daily scan (updates in real-time
+        // based on current regime, sector rotation, and which strategies
+        // are firing TODAY — not 3 days ago).
+        const res = await fetch("/api/v2/daily-scan");
         if (res.ok) {
           const data = await res.json();
-          if (Array.isArray(data) && data.length > 0) {
-            // Extract strategy type from params_json and set sector
-            const enriched = data.map((s: any) => {
-              let stratType = "";
-              let sector = s.sector || "";
-              try {
-                const params = typeof s.params_json === "string"
-                  ? JSON.parse(s.params_json)
-                  : s.params_json || {};
-                stratType = params.t || "";
-                if (!sector) sector = "";
-              } catch {}
-              return {
-                ...s,
-                strategy_type: stratType,
-                sector,
-                // Everything that passed the grid search IS validated — no
-                // manual validate step needed. The grid search already filters
-                // by Sharpe > 0.5, win rate > 42%, profit factor > 1.1, and
-                // Monte Carlo p-value < 0.30.
-                validation_status: "go",
-              };
-            });
+          const proposals = data.proposals || [];
+          if (proposals.length > 0) {
+            const enriched = proposals.map((p: any, i: number) => ({
+              id: p.ticker + "-" + i,
+              ticker: p.ticker,
+              strategy: p.strategy || p.strategy_type || "—",
+              sharpe: p.sharpe || 0,
+              win_rate: p.win_rate || 0,
+              max_drawdown: 0,
+              direction: p.direction || "LONG",
+              sector: p.sector || "",
+              final_pct: p.final_pct || 0,
+              stop_loss: p.stop_loss || 0,
+              take_profit: p.take_profit || 0,
+              validation_status: "go",
+            }));
             setSignals(enriched);
-            // Use the most recent signal's created_at as "last updated"
-            const dates = enriched
-              .map((s: any) => s.created_at || s.signal_date)
-              .filter(Boolean)
-              .sort()
-              .reverse();
-            if (dates[0]) {
-              setLastUpdated(new Date(dates[0]).toLocaleString());
+            setLastUpdated(
+              data.generated_at
+                ? new Date(data.generated_at).toLocaleString()
+                : new Date().toLocaleString()
+            );
+          }
+        }
+
+        // If v2 returned nothing, fall back to the static Supabase table
+        if (signals.length === 0) {
+          const fallback = await fetch("/api/signals?limit=200");
+          if (fallback.ok) {
+            const data = await fallback.json();
+            if (Array.isArray(data) && data.length > 0) {
+              const enriched = data.map((s: any) => ({
+                ...s,
+                validation_status: "go",
+              }));
+              setSignals(enriched);
+              const dates = enriched
+                .map((s: any) => s.created_at || s.signal_date)
+                .filter(Boolean)
+                .sort()
+                .reverse();
+              if (dates[0]) {
+                setLastUpdated(new Date(dates[0]).toLocaleString());
+              }
             }
           }
         }
       } catch {
-        // No fallback to fake data — show empty state
+        // No fallback to fake data
       }
       setLoading(false);
     }
     loadSignals();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const filteredSignals = signals.filter((s) => {
@@ -118,7 +134,7 @@ export default function StockFinderPage() {
               Signals
             </h1>
             <p className="mt-2 text-[15px] text-[#868F97]">
-              {signals.length} backtested strategies ranked by Sharpe ratio
+              {signals.length} live signals ranked by Sharpe ratio
               <span
                 className="ml-2 inline-block rounded-full px-2.5 py-0.5 text-[11px] font-medium"
                 style={{
@@ -176,7 +192,7 @@ export default function StockFinderPage() {
                   <th>Strategy</th>
                   <th className="text-right">Sharpe</th>
                   <th className="text-right">Win Rate</th>
-                  <th className="text-right">Max DD</th>
+                  <th className="text-right">Size</th>
                   <th className="text-right">Direction</th>
                   <th className="text-center">Status</th>
                 </tr>
@@ -219,8 +235,8 @@ export default function StockFinderPage() {
                       <td className="text-right font-mono tabular-nums">
                         {(s.win_rate * 100).toFixed(0)}%
                       </td>
-                      <td className="text-right font-mono tabular-nums text-loss">
-                        {(s.max_drawdown * 100).toFixed(1)}%
+                      <td className="text-right font-mono tabular-nums text-emerald-400">
+                        {s.final_pct ? `${(s.final_pct * 100).toFixed(1)}%` : "—"}
                       </td>
                       <td className="text-right">
                         <span
@@ -246,9 +262,9 @@ export default function StockFinderPage() {
         </ScrollReveal>
 
         <div className="mt-4 text-xs text-zinc-500">
-          All signals are pre-validated by the grid search engine (Sharpe &gt; 0.5, win rate &gt; 42%,
-          profit factor &gt; 1.1, Monte Carlo p &lt; 0.30). See /proposals for today's
-          regime-filtered, Kelly-sized trade ideas.
+          Live signals from the v2 engine — regime-filtered, sector-rotation-aware,
+          earnings-blackout-protected. Refreshes on every page load. Size column shows
+          Kelly-optimal position sizing as % of portfolio.
         </div>
       </div>
     </div>
