@@ -420,12 +420,8 @@ export default function HomePage() {
         </ScrollReveal>
       </section>
 
-      {/* Footer */}
-      <footer className="py-8 border-t border-zinc-900">
-        <div className="max-w-[1220px] mx-auto px-6 text-center text-[11px] text-zinc-700">
-          Quantamental Architect — Personal Trading System
-        </div>
-      </footer>
+      {/* Spacer before global layout footer */}
+      <div className="h-8" />
     </div>
   );
 }
