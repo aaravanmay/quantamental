@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { StockSearch } from "@/components/StockSearch";
 import { ScrollReveal } from "@/components/ScrollReveal";
+import { RegimeBadge } from "@/components/RegimeBadge";
+import { SectorRotationCard } from "@/components/SectorRotationCard";
 import { formatCurrency, formatPct, pnlColor, cn } from "@/lib/utils";
 import {
   BarChart3, TrendingUp, TrendingDown, Briefcase, Newspaper,
@@ -103,8 +105,16 @@ export default function HomePage() {
             </p>
           </ScrollReveal>
           <ScrollReveal delay={300}>
-            <div className="max-w-[640px] mx-auto mb-16">
+            <div className="max-w-[640px] mx-auto mb-6">
               <StockSearch fullWidth />
+            </div>
+          </ScrollReveal>
+
+          {/* v2: Live regime + sector rotation */}
+          <ScrollReveal delay={350}>
+            <div className="max-w-[820px] mx-auto mb-12 grid grid-cols-1 md:grid-cols-3 gap-3 text-left">
+              <div className="md:col-span-2"><RegimeBadge /></div>
+              <SectorRotationCard />
             </div>
           </ScrollReveal>
 

@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Crosshair, Target, LineChart, Briefcase, Settings } from "lucide-react";
+import { Crosshair, Target, LineChart, Briefcase, Settings, Sparkles, Zap } from "lucide-react";
 
 const NAV = [
   { href: "/", label: "Screener", icon: Crosshair },
+  { href: "/proposals", label: "Proposals", icon: Zap },
   { href: "/stock-finder", label: "Signals", icon: Target },
   { href: "/paper-trading", label: "Trades", icon: LineChart },
   { href: "/portfolio", label: "Portfolio", icon: Briefcase },
+  { href: "/assistant", label: "Assistant", icon: Sparkles },
 ];
 
 export function Sidebar() {
