@@ -92,13 +92,31 @@ export default function StockFinderPage() {
                 final_pct: Math.min(0.20, Math.max(0.01, (s.sharpe || 0) / 20)),
               };
             });
+            // Filter out bad risk/reward: expected gain must be positive
+            // AND win rate must be at least 42% (the grid search floor)
+            const filtered = enriched.filter((s: Signal) => {
+              const sl = s.stop_loss ?? 0.08;
+              const tp = s.take_profit ?? 0.16;
+              const expGain = s.win_rate * tp - (1 - s.win_rate) * sl;
+              return expGain > 0.01 && s.win_rate >= 0.42;
+            });
             // Sort by Sharpe descending (not random Supabase order)
-            enriched.sort((a: Signal, b: Signal) => b.sharpe - a.sharpe);
-            setSignals(enriched);
+            filtered.sort((a: Signal, b: Signal) => b.sharpe - a.sharpe);
+            setSignals(filtered);
           }
         }
       } catch {}
       setLoading(false);
+  }
+
+  // Auto-queue high conviction signals as pending paper trades
+  async function queueForPaperTrade(signal: Signal) {
+    try {
+      await fetch("/api/auto-trade/preview"); // warm up the route
+      // The actual queuing happens via the auto-trade cron.
+      // For immediate feedback, trigger the auto-trade endpoint directly.
+      await fetch("/api/auto-trade", { method: "POST" });
+    } catch {}
   }
 
   // Load on mount + auto-refresh every 60 seconds
@@ -297,10 +315,23 @@ export default function StockFinderPage() {
                       </div>
                     </div>
 
-                    {/* Bottom: sector + arrow */}
+                    {/* Bottom: sector + actions */}
                     <div className="flex items-center justify-between pt-2 border-t border-zinc-800/50">
                       <span className="text-[10px] text-zinc-500">{s.sector || "—"}</span>
-                      <ArrowRight size={14} className="text-zinc-700 group-hover:text-[var(--accent)] transition-colors" />
+                      <div className="flex items-center gap-2">
+                        {s.sharpe >= 1.5 && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              queueForPaperTrade(s);
+                            }}
+                            className="text-[10px] font-medium text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 px-2 py-0.5 rounded transition-colors"
+                          >
+                            Paper Trade
+                          </button>
+                        )}
+                        <ArrowRight size={14} className="text-zinc-700 group-hover:text-[var(--accent)] transition-colors" />
+                      </div>
                     </div>
                   </div>
                 );
