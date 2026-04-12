@@ -20,6 +20,9 @@ interface Signal {
   sector?: string;
   validation_status?: string;
   created_at?: string;
+  final_pct?: number;
+  stop_loss?: number;
+  take_profit?: number;
 }
 
 const TIMEFRAME_LABELS: Record<string, string> = {
