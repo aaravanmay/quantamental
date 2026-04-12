@@ -37,8 +37,7 @@ export default function StockFinderPage() {
   const [activeFilter, setActiveFilter] = useState<"all" | "high" | "watch">("all");
   const router = useRouter();
 
-  useEffect(() => {
-    async function loadSignals() {
+  async function loadSignals() {
       try {
         // Try v2 daily-scan first (has sizing data)
         const v2 = await fetch("/api/v2/daily-scan");
@@ -100,8 +99,14 @@ export default function StockFinderPage() {
         }
       } catch {}
       setLoading(false);
-    }
+  }
+
+  // Load on mount + auto-refresh every 60 seconds
+  useEffect(() => {
     loadSignals();
+    const interval = setInterval(loadSignals, 60_000);
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Conviction tiers based on SHARPE (works even without Kelly sizing)
