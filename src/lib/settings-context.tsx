@@ -93,7 +93,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
         if (!error && data && !cancelled) {
           // Capture the row ID so persistToSupabase updates THIS row
-          if (data.id) _settingsRowId = data.id;
+          if (data.id) storeRowId(data.id);
           setSettings((prev) => ({
             ...prev,
             timeframe: data.timeframe ?? prev.timeframe,
@@ -142,8 +142,19 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
 // ── Persist helper ──────────────────────────────────────────────────────────
 
-// Track the row ID so we update the EXISTING row, not create a new one
+// Track the row ID so we update the EXISTING row, not create a new one.
+// Use localStorage as backup since module variables reset on navigation.
 let _settingsRowId: string | null = null;
+
+function getStoredRowId(): string | null {
+  if (typeof window === "undefined") return null;
+  try { return localStorage.getItem("settings_row_id"); } catch { return null; }
+}
+function storeRowId(id: string) {
+  _settingsRowId = id;
+  if (typeof window === "undefined") return;
+  try { localStorage.setItem("settings_row_id", id); } catch {}
+}
 
 async function persistToSupabase(s: AppSettings) {
   const supabase = getOptionalSupabase();
@@ -162,32 +173,34 @@ async function persistToSupabase(s: AppSettings) {
   };
 
   try {
-    if (_settingsRowId) {
-      // Update the existing row
+    // Try module variable first, then localStorage, then query Supabase
+    const rowId = _settingsRowId || getStoredRowId();
+
+    if (rowId) {
       await supabase
         .from("user_settings")
         .update(payload)
-        .eq("id", _settingsRowId);
+        .eq("id", rowId);
     } else {
-      // No row ID yet — try to find one, or insert
+      // No row ID cached — look it up from Supabase
       const { data } = await supabase
         .from("user_settings")
         .select("id")
         .limit(1)
         .maybeSingle();
       if (data?.id) {
-        _settingsRowId = data.id;
+        storeRowId(data.id);
         await supabase
           .from("user_settings")
           .update(payload)
-          .eq("id", _settingsRowId);
+          .eq("id", data.id);
       } else {
         const { data: inserted } = await supabase
           .from("user_settings")
           .insert(payload)
           .select("id")
           .single();
-        if (inserted?.id) _settingsRowId = inserted.id;
+        if (inserted?.id) storeRowId(inserted.id);
       }
     }
   } catch {
