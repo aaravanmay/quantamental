@@ -52,14 +52,15 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  const closed = trades.filter((t: any) => t.pnl != null);
+  const closed = trades.filter((t: any) => t.pnl_pct != null || t.pnl != null);
 
   const aggregate = (group: any[]) => {
-    const wins = group.filter((t: any) => (t.pnl || 0) > 0);
-    const losses = group.filter((t: any) => (t.pnl || 0) <= 0);
-    const totalPnl = group.reduce((sum: number, t: any) => sum + (t.pnl || 0), 0);
-    const grossProfit = wins.reduce((s: number, t: any) => s + (t.pnl || 0), 0);
-    const grossLoss = Math.abs(losses.reduce((s: number, t: any) => s + (t.pnl || 0), 0));
+    const getPnl = (t: any) => t.pnl_pct ?? t.pnl ?? 0;
+    const wins = group.filter((t: any) => getPnl(t) > 0);
+    const losses = group.filter((t: any) => getPnl(t) <= 0);
+    const totalPnl = group.reduce((sum: number, t: any) => sum + getPnl(t), 0);
+    const grossProfit = wins.reduce((s: number, t: any) => s + getPnl(t), 0);
+    const grossLoss = Math.abs(losses.reduce((s: number, t: any) => s + getPnl(t), 0));
     return {
       trades: group.length,
       win_rate: group.length > 0 ? wins.length / group.length : 0,
