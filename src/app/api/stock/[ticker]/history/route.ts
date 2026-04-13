@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 const FMP_KEY = process.env.FMP_API_KEY || "";
 
-// In-memory cache to avoid burning FMP's 250 calls/day limit
+// In-memory cache to reduce FMP API calls
 const cache = new Map<string, { data: any[]; timestamp: number }>();
 const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours — historical data doesn't change frequently
 

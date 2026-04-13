@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
         recommendation: "NO-GO",
         confidence: "LOW",
         signal: "Insufficient data",
-        thesis: `Unable to fetch data for ${t}. The FMP API may be rate limited (250 calls/day on free tier). Try again later.`,
+        thesis: `Unable to fetch data for ${t}. The FMP API may be temporarily unavailable. Try again later.`,
         risk: "No data available to assess risk.",
         monitoring: "Retry when API limit resets.",
         events_assessment: "No data",

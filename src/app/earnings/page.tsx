@@ -255,7 +255,7 @@ export default function EarningsPage() {
                     <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-0.5">EPS Actual</div>
                     <div className="flex items-center gap-1.5">
                       <span className="text-[14px] font-mono font-semibold text-white">
-                        ${e.epsActual?.toFixed(2)}
+                        {e.epsActual != null ? `$${e.epsActual.toFixed(2)}` : "—"}
                       </span>
                       {e.epsBeat != null && (
                         e.epsBeat

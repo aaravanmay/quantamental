@@ -44,8 +44,9 @@ export async function GET() {
           { next: { revalidate: 86400 } }
         );
         if (priceRes.ok) {
-          const prices = await priceRes.json();
-          const dayOf = (prices || []).find((p: any) => p.date === e.date);
+          const raw = await priceRes.json();
+          const prices = Array.isArray(raw) ? raw : raw?.historical || [];
+          const dayOf = prices.find((p: any) => p.date === e.date);
           if (dayOf) {
             priceChange = dayOf.changePercent;
           }

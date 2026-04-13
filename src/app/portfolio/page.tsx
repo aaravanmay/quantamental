@@ -694,6 +694,16 @@ export default function PortfolioPage() {
                                 setHoldings((prev) =>
                                   prev.filter((x) => x.id !== h.id)
                                 );
+                                // Persist removal to Supabase
+                                import("@/lib/supabase")
+                                  .then(({ getSupabase }) => {
+                                    getSupabase()
+                                      .from("portfolio_holdings")
+                                      .delete()
+                                      .eq("id", h.id)
+                                      .then(() => {});
+                                  })
+                                  .catch(() => {});
                               }}
                               className="text-[11px] text-[#555] hover:text-loss transition-colors"
                             >

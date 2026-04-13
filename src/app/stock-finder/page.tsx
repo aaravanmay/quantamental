@@ -294,7 +294,7 @@ export default function StockFinderPage() {
                       </div>
                       <div>
                         <div className="text-[9px] uppercase tracking-wider text-zinc-600">Hold</div>
-                        <div className="text-[14px] font-mono font-semibold text-zinc-300 text-[11px]">{holdDays}</div>
+                        <div className="text-[14px] font-mono font-semibold text-zinc-300">{holdDays}</div>
                       </div>
                     </div>
 

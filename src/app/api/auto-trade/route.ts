@@ -178,6 +178,7 @@ export async function POST(_req: NextRequest) {
         strategy: proposal.strategy || "v2_proposal",
         stop_loss_pct: stopLoss,
         take_profit_pct: takeProfit,
+        user_id: "default",
       });
 
       if (!error) {

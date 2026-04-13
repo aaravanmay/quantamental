@@ -288,10 +288,10 @@ export default function StockDetailPage({
         <ScrollReveal delay={100}>
           <div className="mb-8 grid grid-cols-2 gap-2.5 md:grid-cols-6">
             {[
-              { label: "Open", value: quote ? formatCurrency(quote.open) : "\u2014" },
-              { label: "High", value: quote ? formatCurrency(quote.high) : "\u2014" },
-              { label: "Low", value: quote ? formatCurrency(quote.low) : "\u2014" },
-              { label: "Volume", value: quote ? quote.volume.toLocaleString() : "\u2014" },
+              { label: "Open", value: quote?.open ? formatCurrency(quote.open) : "\u2014" },
+              { label: "52w High", value: quote?.high ? formatCurrency(quote.high) : "\u2014" },
+              { label: "52w Low", value: quote?.low ? formatCurrency(quote.low) : "\u2014" },
+              { label: "Volume", value: quote?.volume ? quote.volume.toLocaleString() : "\u2014" },
               {
                 label: "Mkt Cap",
                 value: quote?.market_cap

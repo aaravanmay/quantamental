@@ -174,7 +174,7 @@ export default function ProposalsPage() {
                       )}
                     </div>
                     <span className="text-emerald-400 font-mono font-bold text-sm">
-                      {(p.final_pct * 100).toFixed(1)}%
+                      {((p.final_pct ?? 0) * 100).toFixed(1)}%
                     </span>
                   </div>
 

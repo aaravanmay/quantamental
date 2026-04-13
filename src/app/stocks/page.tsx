@@ -201,9 +201,9 @@ export default function StocksPage() {
                         {s.symbol}
                       </span>
                       <span className="ml-2 text-[12px] text-[#868F97] hidden sm:inline">
-                        {s.name.length > 25
-                          ? s.name.slice(0, 25) + "..."
-                          : s.name}
+                        {(s.name || "").length > 25
+                          ? (s.name || "").slice(0, 25) + "..."
+                          : s.name || ""}
                       </span>
                     </div>
                     <div className="flex items-center gap-3">
@@ -249,9 +249,9 @@ export default function StocksPage() {
                         {s.symbol}
                       </span>
                       <span className="ml-2 text-[12px] text-[#868F97] hidden sm:inline">
-                        {s.name.length > 25
-                          ? s.name.slice(0, 25) + "..."
-                          : s.name}
+                        {(s.name || "").length > 25
+                          ? (s.name || "").slice(0, 25) + "..."
+                          : s.name || ""}
                       </span>
                     </div>
                     <div className="flex items-center gap-3">

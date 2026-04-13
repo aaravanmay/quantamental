@@ -37,7 +37,37 @@ export default function PaperTradingPage() {
         const res = await fetch("/api/paper-trade");
         if (res.ok) {
           const data = await res.json();
-          setTrades(data.trades || []);
+          const allTrades = data.trades || [];
+          setTrades(allTrades);
+
+          // Compute stats from closed trades
+          const closed = allTrades.filter((t: PaperTrade) => t.status === "closed" && t.exit_price && t.entry_price);
+          if (closed.length > 0) {
+            const pnls = closed.map((t: PaperTrade) => {
+              const pnl = t.direction === "SHORT"
+                ? ((t.entry_price - t.exit_price!) / t.entry_price) * 100
+                : ((t.exit_price! - t.entry_price) / t.entry_price) * 100;
+              return pnl;
+            });
+            const wins = pnls.filter((p: number) => p > 0).length;
+            const totalReturn = pnls.reduce((a: number, b: number) => a + b, 0);
+            const avgReturn = totalReturn / pnls.length;
+            const stdDev = Math.sqrt(pnls.reduce((sum: number, p: number) => sum + (p - avgReturn) ** 2, 0) / pnls.length);
+            const holdDays = closed.map((t: PaperTrade) => {
+              const entry = new Date(t.entry_date);
+              const exit = new Date(t.exit_date || t.entry_date);
+              return Math.max(1, Math.round((exit.getTime() - entry.getTime()) / 86400000));
+            });
+            const avgHold = holdDays.reduce((a: number, b: number) => a + b, 0) / holdDays.length;
+            setStats({
+              total_return_pct: Math.round(totalReturn * 100) / 100,
+              sharpe_ratio: stdDev > 0 ? Math.round((avgReturn / stdDev) * 100) / 100 : 0,
+              win_rate: Math.round((wins / pnls.length) * 100) / 100,
+              avg_hold_days: Math.round(avgHold),
+              total_trades: closed.length,
+              open_trades: allTrades.filter((t: PaperTrade) => t.status === "open").length,
+            });
+          }
         }
       } catch {}
     }
